@@ -31,7 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -73,7 +73,7 @@ export default function NewAppointmentPage() {
   const { toast } = useToast();
   const [timeZone, setTimeZone] = useState('');
 
-  useState(() => {
+  useEffect(() => {
     setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
   }, []);
 
@@ -81,18 +81,31 @@ export default function NewAppointmentPage() {
     resolver: zodResolver(FormSchema),
   });
 
+  const { watch, resetField, setValue, getValues, setError } = form;
+  const selectedDate = watch('date');
+
+  useEffect(() => {
+    setAvailableTimes([]);
+    setValue('time', undefined);
+  }, [selectedDate, setValue]);
+
+
   function onSubmit(data: FormValues) {
     console.log(data);
     toast({
       title: "Agendamento Confirmado!",
-      description: `Sua consulta para o dia ${format(data.date, 'PPP', {locale: ptBR})} às ${data.time} foi marcada.`,
+      description: `Sua consulta para o dia ${format(data.date, 'PPP', {locale: ptBR})} às ${format(new Date(data.time!), 'p', { locale: ptBR })} foi marcada.`,
     })
   }
 
   function onFindTimes() {
-    const serviceType = form.getValues('serviceType');
+    const serviceType = getValues('serviceType');
     if (!serviceType) {
-        form.setError('serviceType', { message: 'Selecione um serviço para ver os horários.'});
+        setError('serviceType', { message: 'Selecione um serviço para ver os horários.'});
+        return;
+    }
+    if (!selectedDate) {
+        setError('date', { message: 'Selecione uma data para ver os horários.'});
         return;
     }
 
@@ -100,6 +113,7 @@ export default function NewAppointmentPage() {
       const result = await getSuggestedTimesForPortal({
         serviceType,
         timeZone,
+        date: selectedDate,
       });
 
       if (result.success && result.data) {
@@ -107,7 +121,7 @@ export default function NewAppointmentPage() {
          if (result.data.length === 0) {
           toast({
             variant: 'default',
-            title: 'Sem horários',
+            title: 'Sem horários disponíveis',
             description: 'Não há horários disponíveis para este serviço no dia selecionado. Por favor, tente outra data.',
           });
         }
@@ -120,15 +134,6 @@ export default function NewAppointmentPage() {
       }
     });
   }
-
-  const selectedDate = form.watch('date');
-  
-  // Reset times when date changes
-  useState(() => {
-      setAvailableTimes([]);
-      form.resetField('time');
-  }, [selectedDate]);
-
 
   return (
     <div className="flex flex-col gap-8">
@@ -182,7 +187,7 @@ export default function NewAppointmentPage() {
                       <Select onValueChange={(value) => {
                           field.onChange(value);
                           setAvailableTimes([]);
-                          form.resetField('time');
+                          resetField('time');
                       }} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -246,20 +251,22 @@ export default function NewAppointmentPage() {
                 />
 
                 {form.watch('date') && form.watch('serviceType') && (
-                    <div className='space-y-4 text-center'>
+                    <div className='space-y-4'>
                          {!isFindingTimes && availableTimes.length === 0 && (
-                            <Button onClick={onFindTimes} disabled={isFindingTimes} className='w-full max-w-sm mx-auto'>
-                                {isFindingTimes ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Buscando horários...</> : 'Ver Horários Disponíveis'}
-                            </Button>
+                            <div className='text-center'>
+                                <Button onClick={onFindTimes} disabled={isFindingTimes} className='w-full max-w-sm mx-auto' type='button'>
+                                    {isFindingTimes ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Buscando horários...</> : 'Ver Horários Disponíveis'}
+                                </Button>
+                            </div>
                          )}
-                         {isFindingTimes && <p className='text-muted-foreground animate-pulse'>Buscando horários para o dia selecionado...</p>}
+                         {isFindingTimes && <p className='text-muted-foreground animate-pulse text-center'>Buscando horários para o dia selecionado...</p>}
                          {availableTimes.length > 0 && (
                              <FormField
                                 control={form.control}
                                 name="time"
                                 render={({ field }) => (
                                     <FormItem className="space-y-3">
-                                      <FormLabel className='text-base'>Escolha um horário</FormLabel>
+                                      <FormLabel className='text-base text-center block'>Escolha um horário</FormLabel>
                                       <FormControl>
                                         <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                             {availableTimes.map(time => (
@@ -312,5 +319,3 @@ export default function NewAppointmentPage() {
     </div>
   );
 }
-
-    

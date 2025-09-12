@@ -4,6 +4,7 @@
 import { suggestAppointmentTimes, SuggestAppointmentTimesInput, SuggestAppointmentTimesOutput } from "@/ai/flows/suggest-appointment-times";
 import { chat as chatFlow, ChatInput, ChatOutput } from "@/ai/flows/chat";
 import { z } from "zod";
+import { subDays, addDays } from "date-fns";
 
 const appointmentFormSchema = z.object({
   ownerName: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
@@ -39,6 +40,7 @@ const serviceDurations: Record<string, number> = {
 const portalAppointmentFormSchema = z.object({
     serviceType: z.string({ required_error: 'Por favor, selecione um serviço.' }),
     timeZone: z.string(),
+    date: z.date(),
 });
 type PortalAppointmentFormInput = z.infer<typeof portalAppointmentFormSchema>;
 
@@ -75,18 +77,46 @@ export async function getSuggestedTimesForPortal(data: PortalAppointmentFormInpu
         return { success: false, error: "Dados inválidos fornecidos." };
     }
 
-    const { serviceType, timeZone } = validatedData.data;
+    const { serviceType, timeZone, date } = validatedData.data;
+
+    // A IA é melhor para sugerir horários em um intervalo de datas.
+    // Vamos criar um intervalo de 1 dia (a data selecionada) para a IA.
+    // E vamos adicionar algumas datas bloqueadas para simular horários já preenchidos.
+    const blockedTimes = [
+      addDays(date, 0).toISOString().split('T')[0] + 'T10:00:00',
+      addDays(date, 0).toISOString().split('T')[0] + 'T14:30:00',
+    ];
+
+    const availabilityWithBlockedTimes = {
+      ...JSON.parse(staffAvailability),
+      blocked: blockedTimes,
+      dateRange: {
+        start: date.toISOString(),
+        end: addDays(date, 1).toISOString()
+      }
+    }
+
     const durationMinutes = serviceDurations[serviceType] || 30;
 
     try {
         const result = await suggestAppointmentTimes({
             serviceType,
-            staffAvailability,
+            staffAvailability: JSON.stringify(availabilityWithBlockedTimes),
             timeZone,
             durationMinutes,
             numberOfSuggestions: 8,
         });
-        return { success: true, data: result.suggestedAppointmentTimes };
+
+        // Filtra os resultados para garantir que eles estão apenas no dia selecionado pelo usuário
+        const filteredTimes = result.suggestedAppointmentTimes.filter(time => {
+            const suggestedDate = new Date(time);
+            return suggestedDate.getFullYear() === date.getFullYear() &&
+                   suggestedDate.getMonth() === date.getMonth() &&
+                   suggestedDate.getDate() === date.getDate();
+        });
+
+
+        return { success: true, data: filteredTimes };
     } catch (error) {
         console.error("Erro no fluxo de IA:", error);
         return { success: false, error: "Falha ao sugerir horários. Por favor, tente novamente mais tarde." };
@@ -97,4 +127,23 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
   return await chatFlow(input);
 }
 
+const profileFormSchema = z.object({
+    name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
+    email: z.string().email("Por favor, insira um endereço de e-mail válido."),
+    phone: z.string().min(10, "Por favor, insira um número de telefone válido."),
+});
+
+export async function updateUserProfile(data: z.infer<typeof profileFormSchema>) {
+    const validatedData = profileFormSchema.safeParse(data);
+    if (!validatedData.success) {
+        return { success: false, error: "Dados inválidos fornecidos." };
+    }
     
+    // Em uma aplicação real, aqui você atualizaria os dados no banco de dados.
+    // Por enquanto, vamos apenas simular sucesso.
+    console.log("Atualizando perfil do usuário:", validatedData.data);
+    
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simula latência da rede
+
+    return { success: true, message: "Perfil atualizado com sucesso!" };
+}

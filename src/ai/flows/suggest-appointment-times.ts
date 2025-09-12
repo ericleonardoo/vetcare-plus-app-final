@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -13,7 +14,7 @@ import {z} from 'genkit';
 
 const SuggestAppointmentTimesInputSchema = z.object({
   serviceType: z.string().describe('The type of service requested (e.g., vaccination, checkup).'),
-  staffAvailability: z.string().describe('A JSON string representing the staff availability schedule.'),
+  staffAvailability: z.string().describe('A JSON string representing the staff availability schedule. It can also contain a `blocked` array with specific ISO 8601 date-time strings that are unavailable, and a `dateRange` object with `start` and `end` ISO 8601 date-time strings to constrain the search.'),
   timeZone: z.string().describe('The time zone of the user (e.g., America/Los_Angeles).'),
   durationMinutes: z.number().describe('The duration of the appointment in minutes.'),
   numberOfSuggestions: z.number().describe('The number of appointment time suggestions to provide.'),
@@ -35,15 +36,26 @@ const prompt = ai.definePrompt({
   name: 'suggestAppointmentTimesPrompt',
   input: {schema: SuggestAppointmentTimesInputSchema},
   output: {schema: SuggestAppointmentTimesOutputSchema},
-  prompt: `You are an AI assistant helping to schedule vet appointments. Given the following information, suggest {{numberOfSuggestions}} optimal appointment times in ISO 8601 format. Take into account the user's time zone.
+  prompt: `Você é um assistente de IA especialista em agendamentos de uma clínica veterinária.
+Sua tarefa é sugerir os melhores horários para uma consulta com base nas informações fornecidas.
 
-Service Type: {{{serviceType}}}
-Staff Availability: {{{staffAvailability}}}
-Time Zone: {{{timeZone}}}
-Appointment Duration: {{{durationMinutes}}} minutes.
+Leve em consideração o seguinte:
+1. A duração do serviço solicitado.
+2. A disponibilidade da equipe, que segue um cronograma semanal.
+3. Horários específicos que já estão bloqueados/ocupados.
+4. O fuso horário do usuário para garantir que os horários sejam convenientes para ele.
+5. Se um 'dateRange' for fornecido, sugira horários apenas dentro desse intervalo.
 
-Output the suggested appointment times in a JSON array. Be sure to format the output as an array of ISO 8601 date strings.
-`, // Ensure the array is the output
+Informações da Solicitação:
+- Tipo de Serviço: {{{serviceType}}}
+- Disponibilidade da Equipe e Horários Bloqueados: {{{staffAvailability}}}
+- Fuso Horário do Usuário: {{{timeZone}}}
+- Duração da Consulta: {{{durationMinutes}}} minutos
+- Quantidade de Sugestões: {{numberOfSuggestions}}
+
+Sugira exatamente {{numberOfSuggestions}} horários de consulta ideais.
+Retorne os horários sugeridos no formato ISO 8601 dentro de um array JSON.
+`,
 });
 
 const suggestAppointmentTimesFlow = ai.defineFlow(
