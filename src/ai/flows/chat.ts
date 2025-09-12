@@ -47,11 +47,7 @@ Converse com o usuário.
 
 Histórico da Conversa:
 {{#each history}}
-{{#if (eq role 'user')}}
-Usuário: {{{content}}}
-{{else}}
-Assistente: {{{content}}}
-{{/if}}
+- {{role}}: {{{content}}}
 {{/each}}
 `,
 });
