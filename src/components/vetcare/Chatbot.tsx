@@ -35,16 +35,15 @@ export default function Chatbot() {
   const [input, setInput] = useState('');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollAreaViewportRef = useRef<HTMLDivElement>(null);
   
   const chatbotAvatar = PlaceHolderImages.find((img) => img.id === 'chatbot-avatar');
 
   const scrollToBottom = () => {
-    if (scrollAreaRef.current) {
+    if (scrollAreaViewportRef.current) {
         setTimeout(() => {
-            const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
-            if (viewport) {
-                viewport.scrollTop = viewport.scrollHeight;
+            if (scrollAreaViewportRef.current) {
+                scrollAreaViewportRef.current.scrollTop = scrollAreaViewportRef.current.scrollHeight;
             }
         }, 100);
     }
@@ -57,13 +56,14 @@ export default function Chatbot() {
                 { role: 'model', content: 'Olá! Sou o Dr. Gato, seu assistente virtual da VetCare+. Como posso ajudar hoje?' }
             ]);
         }
-        scrollToBottom();
     }
   }, [isOpen, messages.length]);
   
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if(isOpen) {
+      scrollToBottom();
+    }
+  }, [messages, isOpen]);
 
 
   const handleSendMessage = () => {
@@ -115,9 +115,9 @@ export default function Chatbot() {
                 <p className="text-xs text-primary-foreground/80">Assistente Virtual</p>
               </div>
             </CardHeader>
-            <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-full p-4" ref={scrollAreaRef}>
-                <div className="space-y-4">
+            <CardContent className="flex-1 p-0 overflow-y-auto">
+              <ScrollArea className="h-full" viewportRef={scrollAreaViewportRef}>
+                <div className="space-y-4 p-4">
                   {messages.map((message, index) => (
                     <div
                       key={index}
@@ -134,7 +134,7 @@ export default function Chatbot() {
                       )}
                       <div
                         className={cn(
-                          'rounded-lg px-3 py-2 max-w-[80%] break-words',
+                          'rounded-lg px-3 py-2 max-w-[80%]',
                           message.role === 'user'
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted'
