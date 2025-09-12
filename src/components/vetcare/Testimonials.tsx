@@ -10,26 +10,32 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const testimonials = [
   {
     name: 'Sarah L.',
     pet: 'Max, Golden Retriever',
+    imageId: 'testimonial-1',
     quote: "A equipe da VetCare+ é absolutamente incrível. Eles trataram o Max como se fosse deles. Eu não confiaria em mais ninguém para cuidar da saúde dele.",
   },
   {
     name: 'Mike P.',
     pet: 'Whiskers, Gato Siamês',
+    imageId: 'testimonial-2',
     quote: "A Dra. Carter é incrivelmente experiente e compassiva. Ela dedicou tempo para explicar tudo sobre a condição do Whiskers e nos deixou à vontade.",
   },
   {
     name: 'Jessica T.',
     pet: 'Rocky, Bulldog',
+    imageId: 'testimonial-3',
     quote: "Tivemos uma emergência e a VetCare+ conseguiu nos atender imediatamente. A ação rápida e o cuidado profissional salvaram a vida do Rocky. Somos eternamente gratos!",
   },
     {
     name: 'Chen W.',
     pet: 'Luna, Gata Vira-lata',
+    imageId: 'testimonial-4',
     quote: 'A melhor experiência veterinária que já tive. A equipe da recepção é amigável, a clínica é limpa e o atendimento é de primeira qualidade.',
   },
 ];
@@ -55,11 +61,19 @@ export default function Testimonials() {
             className="w-full max-w-4xl mx-auto"
           >
             <CarouselContent>
-              {testimonials.map((testimonial, index) => (
-                <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
+              {testimonials.map((testimonial) => {
+                 const testimonialImage = PlaceHolderImages.find((img) => img.id === testimonial.imageId);
+                 return (
+                <CarouselItem key={testimonial.name} className="md:basis-1/2 lg:basis-1/3">
                   <div className="p-1 h-full">
-                    <Card className="h-full flex flex-col justify-between">
-                      <CardContent className="flex flex-col items-start gap-4 p-6">
+                    <Card className="h-full flex flex-col justify-between text-center">
+                      <CardContent className="flex flex-col items-center gap-4 p-6">
+                        {testimonialImage && (
+                            <Avatar className='w-24 h-24'>
+                                <AvatarImage src={testimonialImage.imageUrl} alt={testimonial.pet} data-ai-hint={testimonialImage.imageHint} />
+                                <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                        )}
                         <div className="flex gap-1 text-primary">
                           {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-current" />)}
                         </div>
@@ -72,7 +86,7 @@ export default function Testimonials() {
                     </Card>
                   </div>
                 </CarouselItem>
-              ))}
+              )})}
             </CarouselContent>
             <CarouselPrevious />
             <CarouselNext />

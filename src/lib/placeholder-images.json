@@ -35,6 +35,30 @@
       "description": "Avatar para o chatbot, um gato fofo de óculos.",
       "imageUrl": "https://picsum.photos/seed/catbot/100/100",
       "imageHint": "cat glasses"
+    },
+    {
+      "id": "testimonial-1",
+      "description": "Max, um Golden Retriever feliz.",
+      "imageUrl": "https://picsum.photos/seed/pet1/200/200",
+      "imageHint": "golden retriever"
+    },
+    {
+      "id": "testimonial-2",
+      "description": "Whiskers, um Gato Siamês.",
+      "imageUrl": "https://picsum.photos/seed/pet2/200/200",
+      "imageHint": "siamese cat"
+    },
+    {
+      "id": "testimonial-3",
+      "description": "Rocky, um Bulldog.",
+      "imageUrl": "https://picsum.photos/seed/pet3/200/200",
+      "imageHint": "bulldog"
+    },
+    {
+      "id": "testimonial-4",
+      "description": "Luna, uma Gata Vira-lata.",
+      "imageUrl": "https://picsum.photos/seed/pet4/200/200",
+      "imageHint": "tabby cat"
     }
   ]
 }
