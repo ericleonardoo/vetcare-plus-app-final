@@ -86,9 +86,9 @@ export default function DashboardPage() {
             <CardTitle>Ações Rápidas</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <Button size="lg">Agendar Nova Consulta</Button>
-            <Button size="lg" variant="secondary">Adicionar Novo Pet</Button>
-            <Button size="lg" variant="outline">Ver Histórico de Saúde</Button>
+            <Button size="lg" asChild><Link href="/portal/agendamentos/novo">Agendar Nova Consulta</Link></Button>
+            <Button size="lg" variant="secondary" asChild><Link href="/portal/pets/novo">Adicionar Novo Pet</Link></Button>
+            <Button size="lg" variant="outline" asChild><Link href="/portal/historico">Ver Histórico de Saúde</Link></Button>
           </CardContent>
         </Card>
       </div>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
               <CardFooter className="p-0">
-                <Button variant="ghost" className="w-full rounded-t-none">Ver Detalhes</Button>
+                <Button variant="ghost" className="w-full rounded-t-none" asChild><Link href={`/portal/pets/${pet.id}`}>Ver Detalhes</Link></Button>
               </CardFooter>
             </Card>
           ))}
