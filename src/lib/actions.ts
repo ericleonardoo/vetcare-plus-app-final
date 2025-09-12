@@ -36,6 +36,12 @@ const serviceDurations: Record<string, number> = {
     'Atendimento de Emergência': 60,
 };
 
+const portalAppointmentFormSchema = z.object({
+    serviceType: z.string({ required_error: 'Por favor, selecione um serviço.' }),
+    timeZone: z.string(),
+});
+type PortalAppointmentFormInput = z.infer<typeof portalAppointmentFormSchema>;
+
 
 export async function getSuggestedTimes(data: AppointmentFormInput) {
     const validatedData = appointmentFormSchema.safeParse(data);
@@ -62,6 +68,33 @@ export async function getSuggestedTimes(data: AppointmentFormInput) {
     }
 }
 
+export async function getSuggestedTimesForPortal(data: PortalAppointmentFormInput) {
+    const validatedData = portalAppointmentFormSchema.safeParse(data);
+
+    if (!validatedData.success) {
+        return { success: false, error: "Dados inválidos fornecidos." };
+    }
+
+    const { serviceType, timeZone } = validatedData.data;
+    const durationMinutes = serviceDurations[serviceType] || 30;
+
+    try {
+        const result = await suggestAppointmentTimes({
+            serviceType,
+            staffAvailability,
+            timeZone,
+            durationMinutes,
+            numberOfSuggestions: 8,
+        });
+        return { success: true, data: result.suggestedAppointmentTimes };
+    } catch (error) {
+        console.error("Erro no fluxo de IA:", error);
+        return { success: false, error: "Falha ao sugerir horários. Por favor, tente novamente mais tarde." };
+    }
+}
+
 export async function chat(input: ChatInput): Promise<ChatOutput> {
   return await chatFlow(input);
 }
+
+    

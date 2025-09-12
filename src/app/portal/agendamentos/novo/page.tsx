@@ -31,12 +31,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { getSuggestedTimesForPortal } from '@/lib/actions';
+import { useToast } from '@/hooks/use-toast';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 // Mock data
 const pets = [
@@ -61,27 +65,70 @@ const FormSchema = z.object({
   notes: z.string().optional(),
 });
 
-export default function NewAppointmentPage() {
-  const [isFindingTimes, setIsFindingTimes] = useState(false);
-  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+type FormValues = z.infer<typeof FormSchema>;
 
-  const form = useForm<z.infer<typeof FormSchema>>({
+export default function NewAppointmentPage() {
+  const [isFindingTimes, startTransition] = useTransition();
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const { toast } = useToast();
+  const [timeZone, setTimeZone] = useState('');
+
+  useState(() => {
+    setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  }, []);
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
   });
 
-  function onSubmit(data: z.infer<typeof FormSchema>) {
+  function onSubmit(data: FormValues) {
     console.log(data);
-    // Aqui viria a lógica de submissão para a API
+    toast({
+      title: "Agendamento Confirmado!",
+      description: `Sua consulta para o dia ${format(data.date, 'PPP', {locale: ptBR})} às ${data.time} foi marcada.`,
+    })
   }
 
   function onFindTimes() {
-      setIsFindingTimes(true);
-      // Simula uma busca na API
-      setTimeout(() => {
-          setAvailableTimes(['09:00', '10:00', '11:00', '14:00', '15:00']);
-          setIsFindingTimes(false);
-      }, 1500)
+    const serviceType = form.getValues('serviceType');
+    if (!serviceType) {
+        form.setError('serviceType', { message: 'Selecione um serviço para ver os horários.'});
+        return;
+    }
+
+    startTransition(async () => {
+      const result = await getSuggestedTimesForPortal({
+        serviceType,
+        timeZone,
+      });
+
+      if (result.success && result.data) {
+        setAvailableTimes(result.data);
+         if (result.data.length === 0) {
+          toast({
+            variant: 'default',
+            title: 'Sem horários',
+            description: 'Não há horários disponíveis para este serviço no dia selecionado. Por favor, tente outra data.',
+          });
+        }
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Erro',
+          description: result.error,
+        });
+      }
+    });
   }
+
+  const selectedDate = form.watch('date');
+  
+  // Reset times when date changes
+  useState(() => {
+      setAvailableTimes([]);
+      form.resetField('time');
+  }, [selectedDate]);
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -132,7 +179,11 @@ export default function NewAppointmentPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Serviço</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={(value) => {
+                          field.onChange(value);
+                          setAvailableTimes([]);
+                          form.resetField('time');
+                      }} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione um serviço" />
@@ -194,7 +245,7 @@ export default function NewAppointmentPage() {
                 )}
                 />
 
-                {form.watch('date') && (
+                {form.watch('date') && form.watch('serviceType') && (
                     <div className='space-y-4 text-center'>
                          {!isFindingTimes && availableTimes.length === 0 && (
                             <Button onClick={onFindTimes} disabled={isFindingTimes} className='w-full max-w-sm mx-auto'>
@@ -208,14 +259,19 @@ export default function NewAppointmentPage() {
                                 name="time"
                                 render={({ field }) => (
                                     <FormItem className="space-y-3">
-                                    <FormLabel>Escolha um horário</FormLabel>
-                                    <FormControl>
-                                        <div className='flex flex-wrap gap-2 justify-center'>
+                                      <FormLabel className='text-base'>Escolha um horário</FormLabel>
+                                      <FormControl>
+                                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                             {availableTimes.map(time => (
-                                                <Button key={time} type='button' variant={field.value === time ? 'default' : 'outline'} onClick={() => field.onChange(time)}>{time}</Button>
+                                                <div key={time}>
+                                                    <RadioGroupItem value={time} id={time} className="sr-only" />
+                                                    <Label htmlFor={time} className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer text-lg">
+                                                        {format(new Date(time), 'p', { locale: ptBR })}
+                                                    </Label>
+                                                </div>
                                             ))}
-                                        </div>
-                                    </FormControl>
+                                        </RadioGroup>
+                                      </FormControl>
                                     <FormMessage />
                                     </FormItem>
                                 )}
@@ -246,8 +302,8 @@ export default function NewAppointmentPage() {
               />
 
             <div className="flex justify-end gap-2 pt-8">
-                <Button variant="outline" asChild><Link href="/portal/dashboard">Cancelar</Link></Button>
-                <Button type="submit" disabled={!form.watch('time')}>Confirmar Agendamento</Button>
+                <Button variant="outline" asChild><Link href="/portal/agendamentos">Cancelar</Link></Button>
+                <Button type="submit" disabled={!form.watch('time') || isFindingTimes}>Confirmar Agendamento</Button>
             </div>
             </form>
           </Form>
@@ -257,3 +313,4 @@ export default function NewAppointmentPage() {
   );
 }
 
+    
