@@ -1,5 +1,12 @@
+
+'use client';
+
 import Link from 'next/link';
 import { PawPrint } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -10,9 +17,33 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const loginSchema = z.object({
+  email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
+  password: z.string().min(1, { message: "A senha é obrigatória." }),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  const router = useRouter();
+
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  const onSubmit = (data: LoginFormValues) => {
+    // Em um app real, aqui você faria a chamada para a sua API de autenticação.
+    console.log("Dados do login:", data);
+    // Como é uma simulação, vamos apenas redirecionar para o dashboard.
+    router.push('/portal/dashboard');
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary p-4">
       <div className="w-full max-w-md">
@@ -27,23 +58,45 @@ export default function LoginPage() {
               Bem-vindo de volta! Insira seus dados para acessar o portal do seu pet.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="seu@email.com" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" />
-            </div>
-            <div className="flex items-center">
-                <Link href="#" className="ml-auto inline-block text-sm underline">
-                    Esqueceu sua senha?
-                </Link>
-            </div>
-            <Button type="submit" className="w-full">
-              Entrar
-            </Button>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="seu@email.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Senha</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex items-center">
+                    <Link href="#" className="ml-auto inline-block text-sm underline">
+                        Esqueceu sua senha?
+                    </Link>
+                </div>
+                <Button type="submit" className="w-full">
+                  Entrar
+                </Button>
+              </form>
+            </Form>
           </CardContent>
           <div className="mt-4 text-center text-sm p-6 pt-0">
             Ainda não tem uma conta?{' '}
