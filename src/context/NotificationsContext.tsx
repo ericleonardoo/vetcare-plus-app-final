@@ -1,9 +1,16 @@
 'use client';
 
-import { scheduleHumanFollowUp, ScheduleHumanFollowUpInput, ScheduleHumanFollowUpOutput } from '@/lib/actions';
+import { scheduleHumanFollowUp, ScheduleHumanFollowUpInput } from '@/lib/actions';
 import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
 
-export type ChatNotification = ScheduleHumanFollowUpOutput;
+// O tipo de output é definido aqui para evitar importações circulares ou exports inválidos.
+export type ChatNotification = {
+  id: number;
+  userName: string;
+  userContact: string;
+  reason: string;
+  timestamp: string;
+};
 
 type NotificationsContextType = {
   notifications: ChatNotification[];

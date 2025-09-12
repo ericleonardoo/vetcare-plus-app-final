@@ -9,23 +9,6 @@ import { scheduleHumanFollowUpFlow } from '@/ai/tools/clinic-tools';
 import { z } from "zod";
 import { subDays, addDays } from "date-fns";
 
-export const ScheduleHumanFollowUpInputSchema = z.object({
-  userName: z.string().describe('O nome do usuário que solicita o contato.'),
-  userContact: z.string().describe('A informação de contato do usuário (email ou telefone).'),
-  reason: z.string().describe('Um breve resumo do motivo pelo qual o usuário precisa de ajuda.'),
-});
-export type ScheduleHumanFollowUpInput = z.infer<typeof ScheduleHumanFollowUpInputSchema>;
-
-export const ScheduleHumanFollowUpOutputSchema = z.object({
-  id: z.number(),
-  userName: z.string(),
-  userContact: z.string(),
-  reason: z.string(),
-  timestamp: z.string().describe('O timestamp ISO 8601 de quando a notificação foi criada.'),
-});
-export type ScheduleHumanFollowUpOutput = z.infer<typeof ScheduleHumanFollowUpOutputSchema>;
-
-
 const appointmentFormSchema = z.object({
   ownerName: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
   petName: z.string().min(1, "O nome do pet é obrigatório."),
@@ -178,9 +161,22 @@ export async function generateCarePlan(data: GenerateCarePlanInput): Promise<{su
     }
 }
 
+// O schema de entrada não é exportado, mas usado internamente para validação.
+const ScheduleHumanFollowUpInputSchema = z.object({
+  userName: z.string().describe('O nome do usuário que solicita o contato.'),
+  userContact: z.string().describe('A informação de contato do usuário (email ou telefone).'),
+  reason: z.string().describe('Um breve resumo do motivo pelo qual o usuário precisa de ajuda.'),
+});
+export type ScheduleHumanFollowUpInput = z.infer<typeof ScheduleHumanFollowUpInputSchema>;
+
 export async function scheduleHumanFollowUp(input: ScheduleHumanFollowUpInput) {
+    const validatedData = ScheduleHumanFollowUpInputSchema.safeParse(input);
+    if (!validatedData.success) {
+        return { success: false, error: "Dados de entrada para notificação inválidos." };
+    }
+
     try {
-        const result = await scheduleHumanFollowUpFlow(input);
+        const result = await scheduleHumanFollowUpFlow(validatedData.data);
         return { success: true, data: result };
     } catch (error) {
         console.error('Erro na ferramenta de IA scheduleHumanFollowUp', error);
