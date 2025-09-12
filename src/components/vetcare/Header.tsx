@@ -12,12 +12,17 @@ export default function Header() {
             <span className="text-xl font-bold text-foreground font-headline">VetCare+</span>
           </Link>
         </div>
-        <div className="flex flex-1 items-center justify-end space-x-4">
-          <nav className="flex items-center space-x-1">
+        <div className="flex flex-1 items-center justify-end space-x-2">
+            <nav className="hidden md:flex items-center space-x-2">
+                <Button variant="link" asChild><Link href="#servicos">Serviços</Link></Button>
+                <Button variant="link" asChild><Link href="#equipe">Equipe</Link></Button>
+                <Button variant="link" asChild><Link href="#depoimentos">Depoimentos</Link></Button>
+                <Button variant="link" asChild><Link href="#faq">FAQ</Link></Button>
+                <Button variant="link" asChild><Link href="#contato">Contato</Link></Button>
+            </nav>
             <Button asChild>
               <Link href="#agendamento">Agende Agora</Link>
             </Button>
-          </nav>
         </div>
       </div>
     </header>
