@@ -1,27 +1,16 @@
 import Link from 'next/link';
 import {
-  Bell,
   Home,
-  Users,
-  LineChart,
-  Package2,
   Settings,
   Heart,
   Calendar,
   ClipboardList,
   LogOut,
-  PawPrint
+  PawPrint,
+  Wallet
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Separator } from '../ui/separator';
 
 export default function PortalSidebar() {
@@ -70,7 +59,7 @@ export default function PortalSidebar() {
           href="/portal/financeiro"
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
         >
-          <LineChart className="h-4 w-4" />
+          <Wallet className="h-4 w-4" />
           Financeiro
         </Link>
       </nav>

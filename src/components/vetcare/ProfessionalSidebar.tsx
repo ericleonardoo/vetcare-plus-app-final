@@ -1,0 +1,97 @@
+'use client';
+
+import Link from 'next/link';
+import {
+  Bell,
+  Home,
+  Users,
+  Calendar,
+  ClipboardList,
+  LogOut,
+  PawPrint,
+  Settings,
+  Search
+} from 'lucide-react';
+import { usePathname } from 'next/navigation';
+
+import { Button } from '@/components/ui/button';
+import { Separator } from '../ui/separator';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Input } from '../ui/input';
+
+const navLinks = [
+    { href: "/professional/dashboard", icon: Home, label: "Dashboard" },
+    { href: "/professional/agenda", icon: Calendar, label: "Agenda" },
+    { href: "/professional/pacientes", icon: Users, label: "Pacientes" },
+]
+
+export default function ProfessionalSidebar() {
+    const pathname = usePathname();
+    const vetImage = PlaceHolderImages.find((img) => img.id === 'vet-1');
+
+  return (
+    <aside className="hidden w-72 flex-col border-r bg-background p-4 md:flex">
+      <div className="flex h-16 items-center gap-2 px-2">
+        <Link href="/" className="flex items-center gap-2 font-semibold">
+          <PawPrint className="h-7 w-7 text-primary" />
+          <span className="text-xl font-bold text-foreground font-headline">VetCare+ Pro</span>
+        </Link>
+         <Button variant="outline" size="icon" className="ml-auto h-8 w-8">
+            <Bell className="h-4 w-4" />
+            <span className="sr-only">Alternar notificações</span>
+        </Button>
+      </div>
+      <div className='p-2'>
+        <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar paciente..."
+              className="w-full rounded-lg bg-muted pl-8"
+            />
+        </div>
+      </div>
+      
+      <nav className="flex flex-col gap-2 p-2 text-sm font-medium">
+        {navLinks.map(link => {
+            const isActive = pathname.startsWith(link.href);
+            return (
+                <Link
+                    key={link.href}
+                    href={link.href}
+                    className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted",
+                        isActive && "bg-muted text-primary"
+                    )}
+                    >
+                    <link.icon className="h-4 w-4" />
+                    {link.label}
+                </Link>
+            )
+        })}
+      </nav>
+      <div className="mt-auto p-2">
+        <Separator className='my-2' />
+         <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground">
+          <Avatar className='w-9 h-9'>
+            {vetImage && <AvatarImage src={vetImage.imageUrl} />}
+            <AvatarFallback>EC</AvatarFallback>
+          </Avatar>
+          <div className='flex flex-col'>
+            <span className='font-semibold text-foreground'>Dra. Emily Carter</span>
+            <span className='text-xs'>Veterinária Chefe</span>
+          </div>
+        </div>
+         <Link
+          href="/"
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+        >
+          <LogOut className="h-4 w-4" />
+          Sair
+        </Link>
+      </div>
+    </aside>
+  );
+}

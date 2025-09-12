@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, Wallet } from 'lucide-react';
 
 const invoices = [
   {
@@ -68,7 +68,7 @@ export default function FinancialPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline">Financeiro</h1>
+        <h1 className="text-3xl font-bold font-headline flex items-center gap-3"><Wallet className="w-8 h-8" />Financeiro</h1>
         <p className="text-muted-foreground">
           Visualize seu histórico de pagamentos e faturas.
         </p>
