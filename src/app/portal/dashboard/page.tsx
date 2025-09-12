@@ -15,15 +15,12 @@ import Link from 'next/link';
 import { usePets } from '@/context/PetsContext';
 import { useAppointments } from '@/context/AppointmentsContext';
 import { useMemo } from 'react';
-
-// Mock data - Em um projeto real, isso viria do backend após o login
-const tutor = {
-  name: 'Maria Silva',
-};
+import { useTutor } from '@/context/TutorContext';
 
 export default function DashboardPage() {
   const { pets } = usePets();
   const { appointments } = useAppointments();
+  const { tutor } = useTutor();
 
   const upcomingAppointments = useMemo(() => 
     appointments

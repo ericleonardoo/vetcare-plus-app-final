@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useTransition } from 'react';
+import { useTransition, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -26,13 +25,7 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile } from '@/lib/actions';
-
-// Mock data
-const tutor = {
-  name: 'Maria Silva',
-  email: 'maria.silva@exemplo.com',
-  phone: '(11) 98765-4321',
-};
+import { useTutor } from '@/context/TutorContext';
 
 const profileFormSchema = z.object({
     name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -45,20 +38,22 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function ProfilePage() {
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
+    const { tutor, updateTutor } = useTutor();
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: {
-            name: tutor.name,
-            email: tutor.email,
-            phone: tutor.phone,
-        },
+        defaultValues: tutor,
     });
+
+    useEffect(() => {
+        form.reset(tutor);
+    }, [tutor, form]);
 
     const onSubmit = (data: ProfileFormValues) => {
         startTransition(async () => {
             const result = await updateUserProfile(data);
             if(result.success) {
+                updateTutor(data);
                 toast({
                     title: "Sucesso!",
                     description: result.message,
