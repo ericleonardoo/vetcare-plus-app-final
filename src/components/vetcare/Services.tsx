@@ -26,32 +26,32 @@ const services = [
   {
     icon: Stethoscope,
     title: 'Check-ups de Rotina',
-    description: 'Check-ups regulares para monitorar a saúde do seu pet e detectar problemas precocemente.',
+    description: 'Prevenção e tranquilidade com diagnósticos precoces para uma vida longa e saudável.',
   },
   {
     icon: Syringe,
     title: 'Vacinação',
-    description: 'Proteja seu pet de doenças comuns com nossos programas de vacinação completos.',
+    description: 'A dose de proteção essencial para que seu companheiro explore o mundo com segurança.',
   },
   {
     icon: ToothIcon,
     title: 'Cuidado Dental',
-    description: 'Serviços odontológicos completos, desde limpeza a extrações, para um sorriso saudável.',
+    description: 'Um sorriso saudável para mais bem-estar e momentos felizes. Limpeza e tratamentos completos.',
   },
   {
     icon: Scissors,
-    title: 'Cirurgias',
-    description: 'Procedimentos cirúrgicos de ponta realizados por nossa experiente equipe veterinária.',
+    title: 'Cirurgias Especializadas',
+    description: 'Tecnologia e expertise em procedimentos seguros para a recuperação rápida do seu pet.',
   },
   {
     icon: Sparkles,
     title: 'Banho e Tosa',
-    description: 'Serviços profissionais de banho e tosa para manter seu pet com ótima aparência e bem-estar.',
+    description: 'Bem-estar e carinho em um tratamento de beleza que renova a alegria do seu melhor amigo.',
   },
   {
     icon: HeartPulse,
     title: 'Atendimentos de Emergência',
-    description: 'Cuidado urgente para doenças e lesões inesperadas durante nosso horário de funcionamento.',
+    description: 'Agilidade e cuidado intensivo nos momentos mais críticos. Estamos prontos para ajudar.',
   },
 ];
 
@@ -63,7 +63,7 @@ export default function Services() {
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Nossos Serviços</h2>
             <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Oferecemos uma ampla gama de serviços para atender a todas as necessidades de saúde do seu pet, desde cuidados de rotina a tratamentos especializados.
+              Do cuidado preventivo aos tratamentos complexos, oferecemos tudo o que seu pet precisa para uma vida plena e feliz.
             </p>
           </div>
         </div>
