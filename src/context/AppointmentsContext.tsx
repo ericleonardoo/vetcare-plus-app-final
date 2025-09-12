@@ -17,16 +17,17 @@ export type Appointment = {
 
 type AppointmentsContextType = {
   appointments: Appointment[];
-  addAppointment: (appointment: Omit<Appointment, 'id' | 'vet'>) => void;
+  addAppointment: (appointment: Omit<Appointment, 'id'>, vet?: string) => void;
 };
 
 const initialAppointments: Appointment[] = [
-    { id: 1, petId: 1, petName: 'Paçoca', service: 'Check-up de Rotina', date: '2024-08-15T10:00:00', status: 'Confirmado' as const, vet: 'Dra. Emily Carter' },
-    { id: 2, petId: 2, petName: 'Whiskers', service: 'Vacinação Anual', date: '2024-08-22T14:30:00', status: 'Confirmado' as const, vet: 'Dr. Ben Jacobs' },
-    { id: 3, petId: 1, petName: 'Paçoca', service: 'Limpeza Dental', date: '2024-07-20T11:00:00', status: 'Realizado' as const, vet: 'Dra. Emily Carter' },
-    { id: 4, petId: 2, petName: 'Whiskers', service: 'Consulta de Emergência', date: '2024-06-05T16:20:00', status: 'Realizado' as const, vet: 'Dr. Ben Jacobs' },
-    { id: 5, petId: 1, petName: 'Paçoca', service: 'Consulta para Cirurgia', date: '2024-09-02T09:00:00', status: 'Agendado' as const, vet: 'Dr. Ben Jacobs' },
+    { id: 1, petId: 1, petName: 'Paçoca', service: 'Check-up de Rotina', date: new Date(new Date().setHours(10, 0, 0, 0)).toISOString(), status: 'Confirmado' as const, vet: 'Dra. Emily Carter' },
+    { id: 2, petId: 2, petName: 'Whiskers', service: 'Vacinação Anual', date: new Date(new Date().setHours(14, 30, 0, 0)).toISOString(), status: 'Confirmado' as const, vet: 'Dr. Ben Jacobs' },
+    { id: 3, petId: 1, petName: 'Paçoca', service: 'Limpeza Dental', date: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(), status: 'Realizado' as const, vet: 'Dra. Emily Carter' },
+    { id: 4, petId: 2, petName: 'Whiskers', service: 'Consulta de Emergência', date: new Date(new Date().setDate(new Date().getDate() - 20)).toISOString(), status: 'Realizado' as const, vet: 'Dr. Ben Jacobs' },
+    { id: 5, petId: 1, petName: 'Paçoca', service: 'Consulta para Cirurgia', date: new Date(new Date().setDate(new Date().getDate() + 10)).toISOString(), status: 'Agendado' as const, vet: 'Dr. Ben Jacobs' },
 ];
+
 
 const AppointmentsContext = createContext<AppointmentsContextType | undefined>(undefined);
 
@@ -34,11 +35,11 @@ export const AppointmentsProvider: React.FC<{ children: ReactNode }> = ({ childr
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [vets] = useState(['Dra. Emily Carter', 'Dr. Ben Jacobs']);
 
-  const addAppointment = (appointment: Omit<Appointment, 'id' | 'vet'>) => {
+  const addAppointment = (appointment: Omit<Appointment, 'id' | 'vet'>, vet?: string) => {
     const newAppointment: Appointment = {
       ...appointment,
       id: Date.now(),
-      vet: vets[Math.floor(Math.random() * vets.length)], // Atribui um veterinário aleatoriamente
+      vet: vet || vets[Math.floor(Math.random() * vets.length)], // Atribui um veterinário específico ou aleatório
     };
     setAppointments((prevAppointments) => [...prevAppointments, newAppointment]);
   };
