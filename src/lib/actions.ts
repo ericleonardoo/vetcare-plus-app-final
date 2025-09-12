@@ -2,6 +2,7 @@
 "use server";
 
 import { suggestAppointmentTimes } from "@/ai/flows/suggest-appointment-times";
+import { chat } from "@/ai/flows/chat";
 import { z } from "zod";
 
 const appointmentFormSchema = z.object({

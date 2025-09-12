@@ -29,6 +29,12 @@
       "description": "David Chen, Assistente de Cuidados com Animais",
       "imageUrl": "https://picsum.photos/seed/vet4/400/400",
       "imageHint": "brazilian man smiling"
+    },
+    {
+      "id": "chatbot-avatar",
+      "description": "Avatar para o chatbot, um gato fofo de óculos.",
+      "imageUrl": "https://picsum.photos/seed/catbot/100/100",
+      "imageHint": "cat glasses"
     }
   ]
 }
