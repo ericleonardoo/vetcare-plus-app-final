@@ -138,11 +138,11 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <FormLabel htmlFor="current-password">Senha Atual</FormLabel>
-                            <Input id="current-password" type="password" disabled />
+                            <Input id="current-password" type="password" />
                         </div>
                         <div className="grid gap-2">
                             <FormLabel htmlFor="new-password">Nova Senha</FormLabel>
-                            <Input id="new-password" type="password" disabled />
+                            <Input id="new-password" type="password" />
                         </div>
                     </div>
                 </div>

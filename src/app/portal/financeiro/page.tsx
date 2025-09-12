@@ -1,3 +1,4 @@
+
 import {
   Card,
   CardContent,
@@ -5,30 +6,126 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { CreditCard } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
+
+const invoices = [
+  {
+    invoiceId: 'FAT-00125',
+    date: '2024-07-20',
+    petName: 'Paçoca',
+    service: 'Limpeza Dental',
+    amount: 'R$ 350,00',
+    status: 'Pago' as const,
+  },
+  {
+    invoiceId: 'FAT-00124',
+    date: '2024-06-05',
+    petName: 'Whiskers',
+    service: 'Consulta de Emergência',
+    amount: 'R$ 450,00',
+    status: 'Pago' as const,
+  },
+  {
+    invoiceId: 'FAT-00120',
+    date: '2024-03-10',
+    petName: 'Paçoca',
+    service: 'Vacina Polivalente (V10)',
+    amount: 'R$ 120,00',
+    status: 'Pago' as const,
+  },
+  {
+    invoiceId: 'FAT-00115',
+    date: '2023-12-15',
+    petName: 'Whiskers',
+    service: 'Exames de Sangue',
+    amount: 'R$ 280,00',
+    status: 'Pago' as const,
+  },
+];
 
 export default function FinancialPage() {
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case 'Pago':
+        return 'default';
+      case 'Pendente':
+        return 'destructive';
+      default:
+        return 'secondary';
+    }
+  };
+
   return (
     <div className="flex flex-col gap-8">
-       <div>
-          <h1 className="text-3xl font-bold font-headline">Financeiro</h1>
-          <p className="text-muted-foreground">
-            Visualize seu histórico de pagamentos e faturas.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold font-headline">Financeiro</h1>
+        <p className="text-muted-foreground">
+          Visualize seu histórico de pagamentos e faturas.
+        </p>
+      </div>
 
-        <Card>
-            <CardHeader>
-                <CardTitle>Em Breve</CardTitle>
-                <CardDescription>
-                    Esta seção está em desenvolvimento. Em breve, você poderá acessar todo o seu histórico financeiro, incluindo faturas detalhadas e recibos.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center text-center text-muted-foreground p-16">
-                <CreditCard className="w-16 h-16 mb-4" />
-                <p className="font-semibold">Seu histórico de transações aparecerá aqui.</p>
-            </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Histórico de Faturas</CardTitle>
+          <CardDescription>
+            Acesse e baixe os detalhes de todos os seus pagamentos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[120px]">Fatura</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Pet</TableHead>
+                <TableHead>Serviço</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invoices.map((invoice) => (
+                <TableRow key={invoice.invoiceId}>
+                  <TableCell className="font-medium">
+                    {invoice.invoiceId}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(invoice.date + 'T12:00:00').toLocaleDateString(
+                      'pt-BR',
+                      { day: '2-digit', month: '2-digit', year: 'numeric' }
+                    )}
+                  </TableCell>
+                  <TableCell>{invoice.petName}</TableCell>
+                  <TableCell>{invoice.service}</TableCell>
+                  <TableCell className="text-right">{invoice.amount}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={getStatusVariant(invoice.status)}>
+                      {invoice.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="outline" size="icon">
+                      <Download className="h-4 w-4" />
+                      <span className="sr-only">Baixar Fatura</span>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
