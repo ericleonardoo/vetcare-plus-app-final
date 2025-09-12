@@ -3,11 +3,12 @@
 import { Stethoscope, Syringe, ClipboardList } from 'lucide-react';
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 
-type HealthHistoryItem = {
+export type HealthHistoryItem = {
   date: string;
   type: 'Consulta' | 'Emergência' | 'Exame' | 'Vacina';
   title: string;
   vet: string;
+  details: string;
   icon: React.ElementType;
 };
 
@@ -26,9 +27,10 @@ export type Pet = {
 
 type PetsContextType = {
   pets: Pet[];
-  addPet: (pet: Pet) => void;
+  addPet: (pet: Omit<Pet, 'healthHistory' | 'id'> & { id?: number }) => void;
   updatePet: (id: number, updatedPet: Partial<Pet>) => void;
   deletePet: (id: number) => void;
+  addHealthHistoryEntry: (petId: number, entry: HealthHistoryItem) => void;
 };
 
 const initialPets: Pet[] = [
@@ -52,8 +54,8 @@ const initialPets: Pet[] = [
     avatarUrl: 'https://picsum.photos/seed/brasil1/200/200',
     avatarHint: 'dog brazil',
     healthHistory: [
-        { date: '2024-07-20', type: 'Consulta', title: 'Limpeza Dental', vet: 'Dra. Emily Carter', icon: Stethoscope },
-        { date: '2024-03-10', type: 'Vacina', title: 'Vacina Polivalente (V10)', vet: 'Dra. Emily Carter', icon: Syringe },
+        { date: '2024-07-20', type: 'Consulta', title: 'Limpeza Dental', vet: 'Dra. Emily Carter', details: 'Procedimento de limpeza dental realizado com sucesso.', icon: Stethoscope },
+        { date: '2024-03-10', type: 'Vacina', title: 'Vacina Polivalente (V10)', vet: 'Dra. Emily Carter', details: 'Dose de reforço anual da vacina V10.', icon: Syringe },
     ]
   },
   {
@@ -76,8 +78,8 @@ const initialPets: Pet[] = [
     avatarUrl: 'https://picsum.photos/seed/pet2/200/200',
     avatarHint: 'siamese cat',
      healthHistory: [
-      { date: '2024-06-05', type: 'Emergência', title: 'Consulta de Emergência', vet: 'Dr. Ben Jacobs', icon: Stethoscope },
-      { date: '2023-12-15', type: 'Exame', title: 'Exames de Sangue', vet: 'Dr. Ben Jacobs', icon: ClipboardList },
+      { date: '2024-06-05', type: 'Emergência', title: 'Consulta de Emergência', vet: 'Dr. Ben Jacobs', details: 'Apresentou apatia e falta de apetite. Diagnosticado com infecção gástrica leve.', icon: Stethoscope },
+      { date: '2023-12-15', type: 'Exame', title: 'Exames de Sangue', vet: 'Dr. Ben Jacobs', details: 'Hemograma completo e perfil bioquímico. Todos os resultados dentro dos parâmetros normais.', icon: ClipboardList },
     ]
   },
 ];
@@ -88,8 +90,13 @@ const PetsContext = createContext<PetsContextType | undefined>(undefined);
 export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [pets, setPets] = useState<Pet[]>(initialPets);
 
-  const addPet = (pet: Pet) => {
-    setPets((prevPets) => [...prevPets, pet]);
+  const addPet = (petData: Omit<Pet, 'healthHistory' | 'id'> & { id?: number }) => {
+     const newPet: Pet = {
+      id: petData.id || Date.now(),
+      healthHistory: [],
+      ...petData,
+    };
+    setPets((prevPets) => [...prevPets, newPet]);
   };
 
   const updatePet = (id: number, updatedPet: Partial<Pet>) => {
@@ -101,9 +108,23 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const deletePet = (id: number) => {
     setPets((prevPets) => prevPets.filter((pet) => pet.id !== id));
   };
+  
+  const addHealthHistoryEntry = (petId: number, entry: HealthHistoryItem) => {
+    setPets(prevPets => 
+        prevPets.map(pet => {
+            if (pet.id === petId) {
+                return {
+                    ...pet,
+                    healthHistory: [...pet.healthHistory, entry]
+                };
+            }
+            return pet;
+        })
+    );
+  };
 
   return (
-    <PetsContext.Provider value={{ pets, addPet, updatePet, deletePet }}>
+    <PetsContext.Provider value={{ pets, addPet, updatePet, deletePet, addHealthHistoryEntry }}>
       {children}
     </PetsContext.Provider>
   );
@@ -116,3 +137,5 @@ export const usePets = () => {
   }
   return context;
 };
+
+    

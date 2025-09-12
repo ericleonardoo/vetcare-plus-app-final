@@ -1,3 +1,4 @@
+'use client';
 
 import {
   Card,
@@ -8,9 +9,6 @@ import {
 } from '@/components/ui/card';
 import {
   FileText,
-  Stethoscope,
-  Syringe,
-  ClipboardList,
 } from 'lucide-react';
 import {
   Select,
@@ -19,50 +17,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-
-const healthHistory = [
-  {
-    petName: 'Paçoca',
-    date: '2024-07-20',
-    type: 'Consulta',
-    icon: Stethoscope,
-    title: 'Limpeza Dental',
-    vet: 'Dra. Emily Carter',
-    details:
-      'Procedimento de limpeza dental realizado com sucesso. O Paçoca se comportou muito bem. Recomendado o uso de brinquedos para saúde dental.',
-  },
-  {
-    petName: 'Whiskers',
-    date: '2024-06-05',
-    type: 'Emergência',
-    icon: Stethoscope,
-    title: 'Consulta de Emergência',
-    vet: 'Dr. Ben Jacobs',
-    details:
-      'Whiskers apresentou apatia e falta de apetite. Diagnosticado com infecção gástrica leve. Medicado e liberado.',
-  },
-  {
-    petName: 'Paçoca',
-    date: '2024-03-10',
-    type: 'Vacina',
-    icon: Syringe,
-    title: 'Vacina Polivalente (V10)',
-    vet: 'Dra. Emily Carter',
-    details: 'Dose de reforço anual da vacina V10. Nenhuma reação adversa.',
-  },
-  {
-    petName: 'Whiskers',
-    date: '2023-12-15',
-    type: 'Exame',
-    icon: ClipboardList,
-    title: 'Exames de Sangue de Rotina',
-    vet: 'Dr. Ben Jacobs',
-    details: 'Hemograma completo e perfil bioquímico. Todos os resultados dentro dos parâmetros normais. Excelente estado de saúde.',
-  },
-];
+import { usePets } from '@/context/PetsContext';
+import { useMemo, useState } from 'react';
 
 export default function HealthHistoryPage() {
+  const { pets } = usePets();
+  const [selectedPetId, setSelectedPetId] = useState('todos');
+
+  const allHistoryItems = useMemo(() => {
+    return pets.flatMap(pet => 
+      pet.healthHistory.map(item => ({ ...item, petName: pet.name }))
+    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [pets]);
+
+  const filteredHistory = useMemo(() => {
+    if (selectedPetId === 'todos') {
+      return allHistoryItems;
+    }
+    return allHistoryItems.filter(item => {
+      const pet = pets.find(p => p.name === item.petName);
+      return pet && String(pet.id) === selectedPetId;
+    });
+  }, [allHistoryItems, selectedPetId, pets]);
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -81,14 +58,15 @@ export default function HealthHistoryPage() {
             </CardDescription>
           </div>
           <div className="w-48">
-            <Select defaultValue="todos">
+            <Select value={selectedPetId} onValueChange={setSelectedPetId}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por pet" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os Pets</SelectItem>
-                <SelectItem value="pacoca">Paçoca</SelectItem>
-                <SelectItem value="whiskers">Whiskers</SelectItem>
+                {pets.map(pet => (
+                   <SelectItem key={pet.id} value={String(pet.id)}>{pet.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -98,7 +76,7 @@ export default function HealthHistoryPage() {
             {/* Linha do tempo vertical */}
             <div className="absolute left-9 top-0 h-full w-0.5 bg-border" />
 
-            {healthHistory.map((item, index) => (
+            {filteredHistory.length > 0 ? filteredHistory.map((item, index) => (
               <div key={index} className="flex gap-6 mb-10">
                 <div className="z-10 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
                   <item.icon className="h-4 w-4" />
@@ -128,7 +106,12 @@ export default function HealthHistoryPage() {
                   <p className="mt-2 text-sm">{item.details}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-10 text-muted-foreground">
+                <p>Nenhum histórico encontrado para o pet selecionado.</p>
+              </div>
+            )}
+
             <div className="flex gap-6">
                <div className="z-10 flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <FileText className="h-4 w-4" />
@@ -143,3 +126,5 @@ export default function HealthHistoryPage() {
     </div>
   );
 }
+
+    
