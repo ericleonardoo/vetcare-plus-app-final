@@ -15,22 +15,22 @@ const testimonials = [
   {
     name: 'Sarah L.',
     pet: 'Max, Golden Retriever',
-    quote: "The team at VetCare+ is absolutely amazing. They treated Max like he was their own. I wouldn't trust anyone else with his health.",
+    quote: "A equipe da VetCare+ é absolutamente incrível. Eles trataram o Max como se fosse deles. Eu não confiaria em mais ninguém para cuidar da saúde dele.",
   },
   {
     name: 'Mike P.',
-    pet: 'Whiskers, Siamese Cat',
-    quote: "Dr. Carter is incredibly knowledgeable and compassionate. She took the time to explain everything about Whiskers' condition and made us feel at ease.",
+    pet: 'Whiskers, Gato Siamês',
+    quote: "A Dra. Carter é incrivelmente experiente e compassiva. Ela dedicou tempo para explicar tudo sobre a condição do Whiskers e nos deixou à vontade.",
   },
   {
     name: 'Jessica T.',
     pet: 'Rocky, Bulldog',
-    quote: "We had an emergency and VetCare+ was able to see us right away. Their quick action and professional care saved Rocky's life. We are forever grateful!",
+    quote: "Tivemos uma emergência e a VetCare+ conseguiu nos atender imediatamente. A ação rápida e o cuidado profissional salvaram a vida do Rocky. Somos eternamente gratos!",
   },
     {
     name: 'Chen W.',
-    pet: 'Luna, Domestic Shorthair',
-    quote: 'The best vet experience I have ever had. The front desk staff are friendly, the facility is clean, and the care is top-notch.',
+    pet: 'Luna, Gata Vira-lata',
+    quote: 'A melhor experiência veterinária que já tive. A equipe da recepção é amigável, a clínica é limpa e o atendimento é de primeira qualidade.',
   },
 ];
 
@@ -40,9 +40,9 @@ export default function Testimonials() {
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">What Our Clients Say</h2>
+            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">O Que Nossos Clientes Dizem</h2>
             <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              We're proud to have earned the trust of our community. Here's what some of our clients have to say about their experience with VetCare+.
+              Temos orgulho de ter conquistado a confiança da nossa comunidade. Veja o que alguns de nossos clientes têm a dizer sobre sua experiência com a VetCare+.
             </p>
           </div>
         </div>

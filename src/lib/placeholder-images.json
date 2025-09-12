@@ -2,33 +2,33 @@
   "placeholderImages": [
     {
       "id": "hero-image",
-      "description": "A happy dog playing outdoors.",
-      "imageUrl": "https://picsum.photos/seed/hero1/1200/800",
-      "imageHint": "happy dog"
+      "description": "Um vira-lata caramelo feliz brincando ao ar livre em uma praça no Brasil.",
+      "imageUrl": "https://picsum.photos/seed/brasil1/1200/800",
+      "imageHint": "dog brazil"
     },
     {
       "id": "vet-1",
-      "description": "Dr. Emily Carter, Chief Veterinarian",
+      "description": "Dra. Emily Carter, Veterinária Chefe",
       "imageUrl": "https://picsum.photos/seed/vet1/400/400",
-      "imageHint": "woman smiling"
+      "imageHint": "brazilian woman"
     },
     {
       "id": "vet-2",
-      "description": "Dr. Ben Jacobs, Surgeon",
+      "description": "Dr. Ben Jacobs, Cirurgião",
       "imageUrl": "https://picsum.photos/seed/vet2/400/400",
-      "imageHint": "man professional"
+      "imageHint": "brazilian man"
     },
     {
       "id": "vet-3",
-      "description": "Maria Garcia, Veterinary Technician",
+      "description": "Maria Garcia, Técnica Veterinária",
       "imageUrl": "https://picsum.photos/seed/vet3/400/400",
-      "imageHint": "woman professional"
+      "imageHint": "brazilian woman professional"
     },
     {
       "id": "vet-4",
-      "description": "David Chen, Animal Care Assistant",
+      "description": "David Chen, Assistente de Cuidados com Animais",
       "imageUrl": "https://picsum.photos/seed/vet4/400/400",
-      "imageHint": "man smiling"
+      "imageHint": "brazilian man smiling"
     }
   ]
 }

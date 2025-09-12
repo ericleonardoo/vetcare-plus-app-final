@@ -25,33 +25,33 @@ const ToothIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const services = [
   {
     icon: Stethoscope,
-    title: 'Routine Check-ups',
-    description: 'Regular check-ups to monitor your pet\'s health and catch any issues early.',
+    title: 'Check-ups de Rotina',
+    description: 'Check-ups regulares para monitorar a saúde do seu pet e detectar problemas precocemente.',
   },
   {
     icon: Syringe,
-    title: 'Vaccinations',
-    description: 'Protect your pet from common diseases with our comprehensive vaccination programs.',
+    title: 'Vacinação',
+    description: 'Proteja seu pet de doenças comuns com nossos programas de vacinação completos.',
   },
   {
     icon: ToothIcon,
-    title: 'Dental Care',
-    description: 'Complete dental services, from cleaning to extractions, for a healthy smile.',
+    title: 'Cuidado Dental',
+    description: 'Serviços odontológicos completos, desde limpeza a extrações, para um sorriso saudável.',
   },
   {
     icon: Scissors,
-    title: 'Surgery',
-    description: 'State-of-the-art surgical procedures performed by our experienced veterinary team.',
+    title: 'Cirurgias',
+    description: 'Procedimentos cirúrgicos de ponta realizados por nossa experiente equipe veterinária.',
   },
   {
     icon: Sparkles,
-    title: 'Grooming',
-    description: 'Professional grooming services to keep your pet looking and feeling great.',
+    title: 'Banho e Tosa',
+    description: 'Serviços profissionais de banho e tosa para manter seu pet com ótima aparência e bem-estar.',
   },
   {
     icon: HeartPulse,
-    title: 'Emergency Visits',
-    description: 'Urgent care for unexpected illnesses and injuries during our operating hours.',
+    title: 'Atendimentos de Emergência',
+    description: 'Cuidado urgente para doenças e lesões inesperadas durante nosso horário de funcionamento.',
   },
 ];
 
@@ -61,9 +61,9 @@ export default function Services() {
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Our Services</h2>
+            <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Nossos Serviços</h2>
             <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              We offer a wide range of services to meet all of your pet's health needs, from routine care to specialized treatments.
+              Oferecemos uma ampla gama de serviços para atender a todas as necessidades de saúde do seu pet, desde cuidados de rotina a tratamentos especializados.
             </p>
           </div>
         </div>

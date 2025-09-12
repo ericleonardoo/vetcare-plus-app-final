@@ -21,14 +21,14 @@ export default function Hero() {
       <div className="absolute inset-0 bg-black/50" />
       <div className="relative container h-full flex flex-col items-center justify-center text-center text-white space-y-6 px-4 md:px-6">
         <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl/none font-headline">
-          Exceptional Care for Your Best Friend
+          Cuidado Excepcional para o Seu Melhor Amigo
         </h1>
         <p className="max-w-[700px] text-lg md:text-xl">
-          At VetCare+, we provide compassionate, state-of-the-art veterinary services to ensure your furry family members live long, healthy, and happy lives.
+          Na VetCare+, oferecemos serviços veterinários de ponta e com compaixão para garantir que seus familiares peludos vivam vidas longas, saudáveis e felizes.
         </p>
         <div>
           <Button asChild size="lg">
-            <Link href="#booking">Schedule an Appointment</Link>
+            <Link href="#agendamento">Agendar uma Consulta</Link>
           </Button>
         </div>
       </div>

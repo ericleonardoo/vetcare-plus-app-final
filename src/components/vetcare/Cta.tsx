@@ -6,14 +6,14 @@ export default function Cta() {
     <section className="w-full py-12 md:py-24 lg:py-32 bg-primary text-primary-foreground">
       <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
         <div className="space-y-3">
-          <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight font-headline">Ready to Give Your Pet the Best Care?</h2>
+          <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight font-headline">Pronto para Dar ao Seu Pet o Melhor Cuidado?</h2>
           <p className="mx-auto max-w-[600px] text-primary-foreground/80 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-            Don't wait. Schedule an appointment today and join the VetCare+ family. Our team is ready to provide the compassionate care your pet deserves.
+            Não espere. Agende uma consulta hoje e junte-se à família VetCare+. Nossa equipe está pronta para fornecer o cuidado compassivo que seu pet merece.
           </p>
         </div>
         <div className="mx-auto w-full max-w-sm space-y-2">
             <Button asChild size="lg" variant="secondary" className="w-full">
-                <Link href="#booking">Book an Appointment Now</Link>
+                <Link href="#agendamento">Agende uma Consulta Agora</Link>
             </Button>
         </div>
       </div>

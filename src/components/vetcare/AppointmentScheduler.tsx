@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { useEffect, useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
@@ -35,22 +36,23 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
 
 const services = [
-  'Routine Check-up',
-  'Vaccination',
-  'Dental Cleaning',
-  'Surgery Consultation',
-  'Grooming',
-  'Emergency Visit',
+  'Check-up de Rotina',
+  'Vacinação',
+  'Limpeza Dental',
+  'Consulta para Cirurgia',
+  'Banho e Tosa',
+  'Atendimento de Emergência',
 ];
 
 const appointmentFormSchema = z.object({
-  ownerName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  petName: z.string().min(1, { message: "Pet's name is required." }),
-  email: z.string().email({ message: 'Please enter a valid email address.' }),
-  phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
-  serviceType: z.string({ required_error: 'Please select a service.' }),
+  ownerName: z.string().min(2, { message: 'O nome deve ter pelo menos 2 caracteres.' }),
+  petName: z.string().min(1, { message: "O nome do pet é obrigatório." }),
+  email: z.string().email({ message: 'Por favor, insira um endereço de e-mail válido.' }),
+  phone: z.string().min(10, { message: 'Por favor, insira um número de telefone válido.' }),
+  serviceType: z.string({ required_error: 'Por favor, selecione um serviço.' }),
   timeZone: z.string(),
 });
 
@@ -86,7 +88,7 @@ export default function AppointmentScheduler() {
       } else {
         toast({
           variant: 'destructive',
-          title: 'Error',
+          title: 'Erro',
           description: result.error,
         });
       }
@@ -113,17 +115,17 @@ export default function AppointmentScheduler() {
                 <Card className="max-w-3xl mx-auto">
                     <CardHeader className="text-center">
                         <CalendarIcon className="mx-auto h-12 w-12 text-primary" />
-                        <CardTitle className="text-3xl font-bold font-headline mt-4">Appointment Confirmed!</CardTitle>
+                        <CardTitle className="text-3xl font-bold font-headline mt-4">Consulta Confirmada!</CardTitle>
                         <CardDescription className="text-lg">
-                            Your appointment for {form.getValues('petName')} is scheduled for:
+                            Sua consulta para {form.getValues('petName')} está marcada para:
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="text-center">
-                        <p className="text-2xl font-semibold text-primary">{format(new Date(selectedTime!), 'PPPP p')}</p>
-                        <p className="text-muted-foreground mt-2">A confirmation email has been sent to {form.getValues('email')}.</p>
+                        <p className="text-2xl font-semibold text-primary">{format(new Date(selectedTime!), 'PPPP p', { locale: ptBR })}</p>
+                        <p className="text-muted-foreground mt-2">Um e-mail de confirmação foi enviado para {form.getValues('email')}.</p>
                     </CardContent>
                     <CardFooter className="flex justify-center">
-                        <Button onClick={handleReset}>Book Another Appointment</Button>
+                        <Button onClick={handleReset}>Agendar Outra Consulta</Button>
                     </CardFooter>
                 </Card>
             </div>
@@ -132,13 +134,13 @@ export default function AppointmentScheduler() {
   }
 
   return (
-    <section id="booking" className="w-full py-12 md:py-24 lg:py-32 bg-accent">
+    <section id="agendamento" className="w-full py-12 md:py-24 lg:py-32 bg-accent">
       <div className="container px-4 md:px-6">
         <Card className="max-w-3xl mx-auto">
           <CardHeader>
-            <CardTitle className="text-3xl font-bold text-center font-headline">Book an Appointment</CardTitle>
+            <CardTitle className="text-3xl font-bold text-center font-headline">Agende uma Consulta</CardTitle>
             <CardDescription className="text-center">
-              {suggestedTimes.length > 0 ? 'Please select a time for your appointment.' : 'Fill in the details below to find available times.'}
+              {suggestedTimes.length > 0 ? 'Por favor, selecione um horário para sua consulta.' : 'Preencha os detalhes abaixo para encontrar horários disponíveis.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -151,9 +153,9 @@ export default function AppointmentScheduler() {
                       name="ownerName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Your Name</FormLabel>
+                          <FormLabel>Seu Nome</FormLabel>
                           <FormControl>
-                            <Input placeholder="John Doe" {...field} />
+                            <Input placeholder="Maria Silva" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -164,9 +166,9 @@ export default function AppointmentScheduler() {
                       name="petName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Pet's Name</FormLabel>
+                          <FormLabel>Nome do Pet</FormLabel>
                           <FormControl>
-                            <Input placeholder="Buddy" {...field} />
+                            <Input placeholder="Paçoca" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -179,7 +181,7 @@ export default function AppointmentScheduler() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="you@example.com" {...field} />
+                            <Input placeholder="voce@exemplo.com.br" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -190,9 +192,9 @@ export default function AppointmentScheduler() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Phone Number</FormLabel>
+                          <FormLabel>Telefone</FormLabel>
                           <FormControl>
-                            <Input placeholder="(123) 456-7890" {...field} />
+                            <Input placeholder="(11) 98765-4321" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -204,11 +206,11 @@ export default function AppointmentScheduler() {
                     name="serviceType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Service</FormLabel>
+                        <FormLabel>Serviço</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a service" />
+                              <SelectValue placeholder="Selecione um serviço" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -227,10 +229,10 @@ export default function AppointmentScheduler() {
                     {isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Finding Times...
+                        Buscando Horários...
                       </>
                     ) : (
-                      'Find Available Times'
+                      'Encontrar Horários Disponíveis'
                     )}
                   </Button>
                 </form>
@@ -241,19 +243,19 @@ export default function AppointmentScheduler() {
                   {suggestedTimes.map((time) => (
                     <div key={time}>
                         <RadioGroupItem value={time} id={time} className="sr-only" />
-                        <Label htmlFor={time} className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
-                            <span className="font-semibold">{format(new Date(time), 'EEEE, MMMM d')}</span>
-                            <span className="text-2xl">{format(new Date(time), 'p')}</span>
+                        <Label htmlFor={time} className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer">
+                            <span className="font-semibold">{format(new Date(time), 'EEEE, d \'de\' MMMM', { locale: ptBR })}</span>
+                            <span className="text-2xl">{format(new Date(time), 'p', { locale: ptBR })}</span>
                         </Label>
                     </div>
                   ))}
                 </RadioGroup>
                 <div className='flex flex-col sm:flex-row gap-2'>
                     <Button onClick={handleConfirm} className="w-full" disabled={!selectedTime}>
-                        Confirm Appointment
+                        Confirmar Agendamento
                     </Button>
                     <Button onClick={handleReset} variant="outline" className="w-full">
-                        Back
+                        Voltar
                     </Button>
                 </div>
               </div>

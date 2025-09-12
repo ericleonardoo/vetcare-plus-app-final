@@ -6,27 +6,27 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 const teamMembers = [
     {
         imageId: 'vet-1',
-        name: 'Dr. Emily Carter',
-        role: 'Chief Veterinarian',
-        bio: 'Dr. Carter has over 15 years of experience in small animal medicine and a passion for compassionate care.',
+        name: 'Dra. Emily Carter',
+        role: 'Veterinária Chefe',
+        bio: 'Dra. Carter tem mais de 15 anos de experiência em medicina de pequenos animais e uma paixão por cuidados compassivos.',
     },
     {
         imageId: 'vet-2',
         name: 'Dr. Ben Jacobs',
-        role: 'Surgeon',
-        bio: 'Dr. Jacobs is a board-certified surgeon specializing in advanced soft tissue and orthopedic procedures.',
+        role: 'Cirurgião',
+        bio: 'Dr. Jacobs é um cirurgião certificado especializado em procedimentos avançados de tecidos moles e ortopédicos.',
     },
     {
         imageId: 'vet-3',
         name: 'Maria Garcia',
-        role: 'Veterinary Technician',
-        bio: 'Maria is a certified vet tech with a special interest in animal behavior and nutrition.',
+        role: 'Técnica Veterinária',
+        bio: 'Maria é uma técnica veterinária certificada com especial interesse em comportamento e nutrição animal.',
     },
     {
         imageId: 'vet-4',
         name: 'David Chen',
-        role: 'Animal Care Assistant',
-        bio: 'David ensures all our furry patients are comfortable and well-cared for during their stay.',
+        role: 'Assistente de Cuidados com Animais',
+        bio: 'David garante que todos os nossos pacientes peludos estejam confortáveis e bem cuidados durante a estadia.',
     },
 ];
 
@@ -36,9 +36,9 @@ export default function Team() {
             <div className="container px-4 md:px-6">
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
                     <div className="space-y-2">
-                        <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Meet Our Team</h2>
+                        <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Conheça Nossa Equipe</h2>
                         <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                            Our dedicated team of professionals is committed to providing the best care for your pets.
+                            Nossa equipe dedicada de profissionais está comprometida em fornecer o melhor cuidado para seus pets.
                         </p>
                     </div>
                 </div>

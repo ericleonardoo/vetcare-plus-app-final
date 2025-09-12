@@ -5,34 +5,34 @@ import { suggestAppointmentTimes } from "@/ai/flows/suggest-appointment-times";
 import { z } from "zod";
 
 const appointmentFormSchema = z.object({
-  ownerName: z.string().min(2, "Name is too short"),
-  petName: z.string().min(1, "Pet name is required"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().min(10, "Invalid phone number"),
-  serviceType: z.string().min(1, "Please select a service"),
+  ownerName: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
+  petName: z.string().min(1, "O nome do pet é obrigatório."),
+  email: z.string().email("Por favor, insira um endereço de e-mail válido."),
+  phone: z.string().min(10, "Por favor, insira um número de telefone válido."),
+  serviceType: z.string({ required_error: 'Por favor, selecione um serviço.' }),
   timeZone: z.string(),
 });
 
 type AppointmentFormInput = z.infer<typeof appointmentFormSchema>;
 
-// In a real application, this would come from a database.
+// Em uma aplicação real, isso viria de um banco de dados.
 const staffAvailability = JSON.stringify({
-  "Monday": ["09:00-12:00", "14:00-17:00"],
-  "Tuesday": ["09:00-17:00"],
-  "Wednesday": ["09:00-12:00"],
-  "Thursday": ["09:00-17:00"],
-  "Friday": ["09:00-15:00"],
-  "Saturday": ["10:00-14:00"],
-  "Sunday": []
+  "Segunda-feira": ["09:00-12:00", "14:00-17:00"],
+  "Terça-feira": ["09:00-17:00"],
+  "Quarta-feira": ["09:00-12:00"],
+  "Quinta-feira": ["09:00-17:00"],
+  "Sexta-feira": ["09:00-15:00"],
+  "Sábado": ["10:00-14:00"],
+  "Domingo": []
 });
 
 const serviceDurations: Record<string, number> = {
-    'Routine Check-up': 30,
-    'Vaccination': 20,
-    'Dental Cleaning': 60,
-    'Surgery Consultation': 45,
-    'Grooming': 90,
-    'Emergency Visit': 60,
+    'Check-up de Rotina': 30,
+    'Vacinação': 20,
+    'Limpeza Dental': 60,
+    'Consulta para Cirurgia': 45,
+    'Banho e Tosa': 90,
+    'Atendimento de Emergência': 60,
 };
 
 
@@ -40,7 +40,7 @@ export async function getSuggestedTimes(data: AppointmentFormInput) {
     const validatedData = appointmentFormSchema.safeParse(data);
 
     if (!validatedData.success) {
-        return { success: false, error: "Invalid data provided." };
+        return { success: false, error: "Dados inválidos fornecidos." };
     }
 
     const { serviceType, timeZone } = validatedData.data;
@@ -56,7 +56,7 @@ export async function getSuggestedTimes(data: AppointmentFormInput) {
         });
         return { success: true, data: result.suggestedAppointmentTimes };
     } catch (error) {
-        console.error("AI flow error:", error);
-        return { success: false, error: "Failed to suggest appointment times. Please try again later." };
+        console.error("Erro no fluxo de IA:", error);
+        return { success: false, error: "Falha ao sugerir horários. Por favor, tente novamente mais tarde." };
     }
 }
