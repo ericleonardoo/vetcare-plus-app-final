@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { cn } from '@/lib/utils';
-import { chat } from '@/ai/flows/chat';
+import { chat } from '@/lib/actions';
 import {
   Loader2,
   MessageSquare,

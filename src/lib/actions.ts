@@ -1,8 +1,8 @@
 
 "use server";
 
-import { suggestAppointmentTimes } from "@/ai/flows/suggest-appointment-times";
-import { chat } from "@/ai/flows/chat";
+import { suggestAppointmentTimes, SuggestAppointmentTimesInput, SuggestAppointmentTimesOutput } from "@/ai/flows/suggest-appointment-times";
+import { chat as chatFlow, ChatInput, ChatOutput } from "@/ai/flows/chat";
 import { z } from "zod";
 
 const appointmentFormSchema = z.object({
@@ -60,4 +60,8 @@ export async function getSuggestedTimes(data: AppointmentFormInput) {
         console.error("Erro no fluxo de IA:", error);
         return { success: false, error: "Falha ao sugerir horários. Por favor, tente novamente mais tarde." };
     }
+}
+
+export async function chat(input: ChatInput): Promise<ChatOutput> {
+  return await chatFlow(input);
 }
