@@ -134,7 +134,7 @@ export default function Chatbot() {
                       )}
                       <div
                         className={cn(
-                          'rounded-lg px-3 py-2 max-w-[80%]',
+                          'rounded-lg px-3 py-2 max-w-[80%] break-words',
                           message.role === 'user'
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted'
