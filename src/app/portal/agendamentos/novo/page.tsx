@@ -41,6 +41,8 @@ import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { usePets } from '@/context/PetsContext';
+import { useAppointments } from '@/context/AppointmentsContext';
+import { useRouter } from 'next/navigation';
 
 const services = [
   'Check-up de Rotina',
@@ -55,7 +57,7 @@ const FormSchema = z.object({
   petId: z.string({ required_error: 'Por favor, selecione um pet.' }),
   serviceType: z.string({ required_error: 'Por favor, selecione um serviço.' }),
   date: z.date({ required_error: 'Por favor, selecione uma data.' }),
-  time: z.string().optional(),
+  time: z.string({ required_error: 'Por favor, selecione um horário.' }),
   notes: z.string().optional(),
 });
 
@@ -67,6 +69,9 @@ export default function NewAppointmentPage() {
   const { toast } = useToast();
   const [timeZone, setTimeZone] = useState('');
   const { pets } = usePets();
+  const { addAppointment } = useAppointments();
+  const router = useRouter();
+
 
   useEffect(() => {
     setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -76,8 +81,9 @@ export default function NewAppointmentPage() {
     resolver: zodResolver(FormSchema),
   });
 
-  const { watch, resetField, setValue, getValues, setError } = form;
+  const { watch, resetField, setValue, getValues, setError, control, handleSubmit } = form;
   const selectedDate = watch('date');
+  const selectedPetId = watch('petId');
 
   useEffect(() => {
     setAvailableTimes([]);
@@ -86,11 +92,29 @@ export default function NewAppointmentPage() {
 
 
   function onSubmit(data: FormValues) {
-    console.log(data);
+    const selectedPet = pets.find(p => p.id === parseInt(data.petId));
+    if (!selectedPet) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: 'Pet não encontrado.',
+      });
+      return;
+    }
+
+    addAppointment({
+      petId: selectedPet.id,
+      petName: selectedPet.name,
+      service: data.serviceType,
+      date: data.time,
+      status: 'Confirmado',
+    });
+
     toast({
       title: "Agendamento Confirmado!",
-      description: `Sua consulta para o dia ${format(data.date, 'PPP', {locale: ptBR})} às ${format(new Date(data.time!), 'p', { locale: ptBR })} foi marcada.`,
-    })
+      description: `Sua consulta para ${selectedPet.name} no dia ${format(new Date(data.time), 'PPP', {locale: ptBR})} às ${format(new Date(data.time!), 'p', { locale: ptBR })} foi marcada.`,
+    });
+    router.push('/portal/agendamentos');
   }
 
   function onFindTimes() {
@@ -149,10 +173,10 @@ export default function NewAppointmentPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <FormField
-                  control={form.control}
+                  control={control}
                   name="petId"
                   render={({ field }) => (
                     <FormItem>
@@ -174,7 +198,7 @@ export default function NewAppointmentPage() {
                   )}
                 />
                  <FormField
-                  control={form.control}
+                  control={control}
                   name="serviceType"
                   render={({ field }) => (
                     <FormItem>
@@ -204,7 +228,7 @@ export default function NewAppointmentPage() {
               </div>
 
                <FormField
-                control={form.control}
+                control={control}
                 name="date"
                 render={({ field }) => (
                     <FormItem className="flex flex-col">
@@ -218,6 +242,7 @@ export default function NewAppointmentPage() {
                                 'w-full pl-3 text-left font-normal',
                                 !field.value && 'text-muted-foreground'
                             )}
+                            disabled={!selectedPetId}
                             >
                             {field.value ? (
                                 format(field.value, 'PPP', { locale: ptBR })
@@ -245,7 +270,7 @@ export default function NewAppointmentPage() {
                 )}
                 />
 
-                {form.watch('date') && form.watch('serviceType') && (
+                {watch('date') && watch('serviceType') && (
                     <div className='space-y-4'>
                          {!isFindingTimes && availableTimes.length === 0 && (
                             <div className='text-center'>
@@ -257,7 +282,7 @@ export default function NewAppointmentPage() {
                          {isFindingTimes && <p className='text-muted-foreground animate-pulse text-center'>Buscando horários para o dia selecionado...</p>}
                          {availableTimes.length > 0 && (
                              <FormField
-                                control={form.control}
+                                control={control}
                                 name="time"
                                 render={({ field }) => (
                                     <FormItem className="space-y-3">
@@ -283,7 +308,7 @@ export default function NewAppointmentPage() {
                 )}
               
               <FormField
-                control={form.control}
+                control={control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
@@ -305,7 +330,7 @@ export default function NewAppointmentPage() {
 
             <div className="flex justify-end gap-2 pt-8">
                 <Button variant="outline" asChild><Link href="/portal/agendamentos">Cancelar</Link></Button>
-                <Button type="submit" disabled={!form.watch('time') || isFindingTimes}>Confirmar Agendamento</Button>
+                <Button type="submit" disabled={!watch('time') || isFindingTimes}>Confirmar Agendamento</Button>
             </div>
             </form>
           </Form>

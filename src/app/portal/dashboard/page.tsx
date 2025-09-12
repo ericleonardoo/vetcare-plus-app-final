@@ -13,19 +13,25 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePets } from '@/context/PetsContext';
+import { useAppointments } from '@/context/AppointmentsContext';
+import { useMemo } from 'react';
 
 // Mock data - Em um projeto real, isso viria do backend após o login
 const tutor = {
   name: 'Maria Silva',
 };
 
-const appointments = [
-    { id: 1, petName: 'Paçoca', service: 'Check-up de Rotina', date: '2024-08-15T10:00:00', status: 'Confirmado' },
-    { id: 2, petName: 'Whiskers', service: 'Vacinação Anual', date: '2024-08-22T14:30:00', status: 'Confirmado' },
-]
-
 export default function DashboardPage() {
   const { pets } = usePets();
+  const { appointments } = useAppointments();
+
+  const upcomingAppointments = useMemo(() => 
+    appointments
+      .filter(apt => new Date(apt.date) >= new Date())
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 5), // Limita a 5 agendamentos
+    [appointments]
+  );
 
   return (
     <div className="flex flex-col gap-8">
@@ -47,10 +53,10 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            {appointments.length > 0 ? (
+            {upcomingAppointments.length > 0 ? (
               <ul className="space-y-4">
-                  {appointments.map(apt => {
-                      const pet = pets.find(p => p.name === apt.petName);
+                  {upcomingAppointments.map(apt => {
+                      const pet = pets.find(p => p.id === apt.petId);
                       return (
                           <li key={apt.id} className="flex items-center gap-4 p-2 rounded-lg hover:bg-accent">
                               <Avatar className="h-10 w-10">

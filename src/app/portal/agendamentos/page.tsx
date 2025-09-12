@@ -30,22 +30,27 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import { usePets } from '@/context/PetsContext';
-
-
-// Mock data
-const appointments = [
-    { id: 1, petName: 'Paçoca', service: 'Check-up de Rotina', date: '2024-08-15T10:00:00', status: 'Confirmado' as const, vet: 'Dra. Emily Carter' },
-    { id: 2, petName: 'Whiskers', service: 'Vacinação Anual', date: '2024-08-22T14:30:00', status: 'Confirmado' as const, vet: 'Dr. Ben Jacobs' },
-    { id: 3, petName: 'Paçoca', service: 'Limpeza Dental', date: '2024-07-20T11:00:00', status: 'Realizado' as const, vet: 'Dra. Emily Carter' },
-    { id: 4, petName: 'Whiskers', service: 'Consulta de Emergência', date: '2024-06-05T16:20:00', status: 'Realizado' as const, vet: 'Dr. Ben Jacobs' },
-    { id: 5, petName: 'Paçoca', service: 'Consulta para Cirurgia', date: '2024-09-02T09:00:00', status: 'Agendado' as const, vet: 'Dr. Ben Jacobs' },
-]
-
-const upcomingAppointments = appointments.filter(apt => apt.status !== 'Realizado');
-const pastAppointments = appointments.filter(apt => apt.status === 'Realizado');
+import { useAppointments, Appointment } from '@/context/AppointmentsContext';
+import { useMemo } from 'react';
 
 export default function AppointmentsPage() {
   const { pets } = usePets();
+  const { appointments } = useAppointments();
+
+  const upcomingAppointments = useMemo(() => 
+    appointments
+      .filter(apt => new Date(apt.date) >= new Date())
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()), 
+    [appointments]
+  );
+  
+  const pastAppointments = useMemo(() => 
+    appointments
+      .filter(apt => new Date(apt.date) < new Date())
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), 
+    [appointments]
+  );
+
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -60,7 +65,7 @@ export default function AppointmentsPage() {
     }
   };
 
-  const renderAppointmentsTable = (apts: typeof appointments) => (
+  const renderAppointmentsTable = (apts: Appointment[]) => (
      <Table>
         <TableHeader>
             <TableRow>
@@ -73,7 +78,7 @@ export default function AppointmentsPage() {
         </TableHeader>
         <TableBody>
             {apts.map(apt => {
-                 const pet = pets.find(p => p.name === apt.petName);
+                 const pet = pets.find(p => p.id === apt.petId);
                  return (
                     <TableRow key={apt.id}>
                         <TableCell className="hidden sm:table-cell">
