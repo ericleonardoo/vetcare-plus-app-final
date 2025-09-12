@@ -77,8 +77,8 @@ export default function PetsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Editar</DropdownMenuItem>
-                    <DropdownMenuItem>Ver Histórico</DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href={`/portal/pets/${pet.id}/editar`}>Editar</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href={`/portal/pets/${pet.id}`}>Ver Histórico</Link></DropdownMenuItem>
                     <DropdownMenuItem className="text-destructive">
                       Remover
                     </DropdownMenuItem>

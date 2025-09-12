@@ -3,6 +3,7 @@
 
 import { suggestAppointmentTimes, SuggestAppointmentTimesInput, SuggestAppointmentTimesOutput } from "@/ai/flows/suggest-appointment-times";
 import { chat as chatFlow, ChatInput, ChatOutput } from "@/ai/flows/chat";
+import { generateCarePlan as generateCarePlanFlow, GenerateCarePlanInput, GenerateCarePlanOutput } from "@/ai/flows/generate-care-plan";
 import { z } from "zod";
 import { subDays, addDays } from "date-fns";
 
@@ -146,4 +147,14 @@ export async function updateUserProfile(data: z.infer<typeof profileFormSchema>)
     await new Promise(resolve => setTimeout(resolve, 1000)); // Simula latência da rede
 
     return { success: true, message: "Perfil atualizado com sucesso!" };
+}
+
+export async function generateCarePlan(data: GenerateCarePlanInput): Promise<{success: true, data: GenerateCarePlanOutput} | {success: false, error: string}> {
+    try {
+        const result = await generateCarePlanFlow(data);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Erro no fluxo de IA para gerar plano de cuidados:", error);
+        return { success: false, error: "Falha ao gerar o plano de cuidados. Tente novamente." };
+    }
 }
