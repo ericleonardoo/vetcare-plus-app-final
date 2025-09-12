@@ -100,7 +100,7 @@ export default function ProfessionalPatientsPage() {
                        <TableCell>{tutor.name}</TableCell>
                       <TableCell className="text-right">
                          <Button asChild variant="outline" size="sm">
-                            <Link href={`/portal/pets/${pet.id}`}>Ver Prontuário</Link>
+                            <Link href={`/professional/pacientes/${pet.id}`}>Ver Prontuário</Link>
                          </Button>
                       </TableCell>
                     </TableRow>
