@@ -1,3 +1,4 @@
+'use client';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -28,21 +29,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
+import { usePets } from '@/context/PetsContext';
+
 
 // Mock data
-const pets = [
-  {
-    id: 1,
-    name: 'Paçoca',
-    avatarUrl: 'https://picsum.photos/seed/brasil1/200/200',
-  },
-  {
-    id: 2,
-    name: 'Whiskers',
-    avatarUrl: 'https://picsum.photos/seed/pet2/200/200',
-  },
-];
-
 const appointments = [
     { id: 1, petName: 'Paçoca', service: 'Check-up de Rotina', date: '2024-08-15T10:00:00', status: 'Confirmado' as const, vet: 'Dra. Emily Carter' },
     { id: 2, petName: 'Whiskers', service: 'Vacinação Anual', date: '2024-08-22T14:30:00', status: 'Confirmado' as const, vet: 'Dr. Ben Jacobs' },
@@ -55,6 +45,8 @@ const upcomingAppointments = appointments.filter(apt => apt.status !== 'Realizad
 const pastAppointments = appointments.filter(apt => apt.status === 'Realizado');
 
 export default function AppointmentsPage() {
+  const { pets } = usePets();
+
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'Confirmado':
@@ -87,7 +79,7 @@ export default function AppointmentsPage() {
                         <TableCell className="hidden sm:table-cell">
                             <div className='flex items-center gap-2'>
                                 <Avatar className="h-8 w-8">
-                                    <AvatarImage src={pet?.avatarUrl} />
+                                    {pet && <AvatarImage src={pet.avatarUrl} />}
                                     <AvatarFallback>{apt.petName.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <span className='font-medium'>{apt.petName}</span>
@@ -162,10 +154,10 @@ export default function AppointmentsPage() {
         <Card>
             <CardContent className='p-0'>
                 <TabsContent value="proximos">
-                    {renderAppointmentsTable(upcomingAppointments)}
+                    {upcomingAppointments.length > 0 ? renderAppointmentsTable(upcomingAppointments) : <p className="p-8 text-center text-muted-foreground">Nenhum próximo agendamento encontrado.</p>}
                 </TabsContent>
                 <TabsContent value="passados">
-                    {renderAppointmentsTable(pastAppointments)}
+                    {pastAppointments.length > 0 ? renderAppointmentsTable(pastAppointments) : <p className="p-8 text-center text-muted-foreground">Nenhum agendamento passado encontrado.</p>}
                 </TabsContent>
             </CardContent>
         </Card>

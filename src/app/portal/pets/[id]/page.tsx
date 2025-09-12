@@ -1,61 +1,26 @@
-
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { ArrowLeft, Cake, Bone, Cat, Dog, Heart, Stethoscope, Syringe, ClipboardList, Pencil, Sparkles, BrainCircuit, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { generateCarePlan } from '@/lib/actions';
 import type { GenerateCarePlanOutput } from '@/ai/flows/generate-care-plan';
-
-
-// Mock data - em um app real, isso viria do seu banco de dados
-const allPets = [
-  {
-    id: 1,
-    name: 'Paçoca',
-    species: 'Cachorro',
-    breed: 'Vira-lata Caramelo',
-    age: '3 anos',
-    birthDate: '2021-05-10',
-    gender: 'Macho',
-    avatarUrl: 'https://picsum.photos/seed/brasil1/200/200',
-    avatarHint: 'dog brazil',
-    healthHistory: [
-        { date: '2024-07-20', type: 'Consulta', title: 'Limpeza Dental', vet: 'Dra. Emily Carter', icon: Stethoscope },
-        { date: '2024-03-10', type: 'Vacina', title: 'Vacina Polivalente (V10)', vet: 'Dra. Emily Carter', icon: Syringe },
-    ]
-  },
-  {
-    id: 2,
-    name: 'Whiskers',
-    species: 'Gato',
-    breed: 'Siamês',
-    age: '5 anos',
-    birthDate: '2019-08-25',
-    gender: 'Macho',
-    avatarUrl: 'https://picsum.photos/seed/pet2/200/200',
-    avatarHint: 'siamese cat',
-     healthHistory: [
-      { date: '2024-06-05', type: 'Emergência', title: 'Consulta de Emergência', vet: 'Dr. Ben Jacobs', icon: Stethoscope },
-      { date: '2023-12-15', type: 'Exame', title: 'Exames de Sangue', vet: 'Dr. Ben Jacobs', icon: ClipboardList },
-    ]
-  },
-];
+import { usePets } from '@/context/PetsContext';
+import { useRouter } from 'next/navigation';
 
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const [carePlan, setCarePlan] = useState<GenerateCarePlanOutput | null>(null);
+  const router = useRouter();
+  const { pets } = usePets();
 
-
-  // Encontrar o pet com base no ID da URL
-  const pet = allPets.find((p) => p.id === parseInt(params.id));
+  const pet = pets.find((p) => p.id === parseInt(params.id));
 
   const handleGenerateCarePlan = () => {
     if (!pet) return;
@@ -84,13 +49,11 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   };
 
   if (!pet) {
+    // Adicionado um efeito para evitar flash de "não encontrado" enquanto o contexto carrega
     return (
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Pet não encontrado</h1>
-        <p className="text-muted-foreground">O pet que você está procurando não existe.</p>
-        <Button asChild className="mt-4">
-          <Link href="/portal/pets">Voltar para Meus Pets</Link>
-        </Button>
+        <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Carregando dados do pet...</p>
       </div>
     );
   }
@@ -190,22 +153,28 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
                         <CardTitle className="font-headline">Histórico de Saúde Recente</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <ul className="space-y-4">
-                            {pet.healthHistory.map((item, index) => (
-                                <li key={index} className="flex items-center gap-4">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-primary">
-                                        <item.icon className="h-5 w-5" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="font-medium">{item.title}</p>
-                                        <p className="text-sm text-muted-foreground">{new Date(item.date + "T00:00:00").toLocaleDateString('pt-BR', {day: '2-digit', month: 'long', year: 'numeric'})} - {item.vet}</p>
-                                    </div>
-                                     <span className="text-xs font-semibold px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
-                                        {item.type}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
+                        {pet.healthHistory.length > 0 ? (
+                          <ul className="space-y-4">
+                              {pet.healthHistory.map((item, index) => (
+                                  <li key={index} className="flex items-center gap-4">
+                                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-primary">
+                                          <item.icon className="h-5 w-5" />
+                                      </div>
+                                      <div className="flex-1">
+                                          <p className="font-medium">{item.title}</p>
+                                          <p className="text-sm text-muted-foreground">{new Date(item.date + "T00:00:00").toLocaleDateString('pt-BR', {day: '2-digit', month: 'long', year: 'numeric'})} - {item.vet}</p>
+                                      </div>
+                                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
+                                          {item.type}
+                                      </span>
+                                  </li>
+                              ))}
+                          </ul>
+                        ) : (
+                           <div className="text-center text-muted-foreground p-4">
+                              <p>Nenhum histórico recente encontrado.</p>
+                            </div>
+                        )}
                     </CardContent>
                      <CardFooter className="border-t pt-4 flex justify-center">
                          <Button variant="secondary" asChild>

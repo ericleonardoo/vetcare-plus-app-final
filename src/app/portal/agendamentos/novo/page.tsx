@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -41,12 +40,7 @@ import { getSuggestedTimesForPortal } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-
-// Mock data
-const pets = [
-  { id: 1, name: 'Paçoca' },
-  { id: 2, name: 'Whiskers' },
-];
+import { usePets } from '@/context/PetsContext';
 
 const services = [
   'Check-up de Rotina',
@@ -72,6 +66,7 @@ export default function NewAppointmentPage() {
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const { toast } = useToast();
   const [timeZone, setTimeZone] = useState('');
+  const { pets } = usePets();
 
   useEffect(() => {
     setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);

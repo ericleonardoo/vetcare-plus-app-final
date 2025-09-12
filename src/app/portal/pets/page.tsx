@@ -1,11 +1,11 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlusCircle, MoreVertical } from 'lucide-react';
@@ -16,30 +16,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { usePets } from '@/context/PetsContext';
 
-// Mock data
-const pets = [
-  {
-    id: 1,
-    name: 'Paçoca',
-    species: 'Cachorro',
-    breed: 'Vira-lata Caramelo',
-    age: '3 anos',
-    avatarUrl: 'https://picsum.photos/seed/brasil1/200/200',
-    avatarHint: 'dog brazil',
-  },
-  {
-    id: 2,
-    name: 'Whiskers',
-    species: 'Gato',
-    breed: 'Siamês',
-    age: '5 anos',
-    avatarUrl: 'https://picsum.photos/seed/pet2/200/200',
-    avatarHint: 'siamese cat',
-  },
-];
 
 export default function PetsPage() {
+    const { pets } = usePets();
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">

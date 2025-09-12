@@ -1,3 +1,5 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -10,28 +12,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
+import { usePets } from '@/context/PetsContext';
 
 // Mock data - Em um projeto real, isso viria do backend após o login
 const tutor = {
   name: 'Maria Silva',
 };
-
-const pets = [
-  {
-    id: 1,
-    name: 'Paçoca',
-    breed: 'Vira-lata Caramelo',
-    avatarUrl: 'https://picsum.photos/seed/brasil1/200/200',
-    avatarHint: 'dog brazil',
-  },
-  {
-    id: 2,
-    name: 'Whiskers',
-    breed: 'Gato Siamês',
-    avatarUrl: 'https://picsum.photos/seed/pet2/200/200',
-    avatarHint: 'siamese cat',
-  },
-];
 
 const appointments = [
     { id: 1, petName: 'Paçoca', service: 'Check-up de Rotina', date: '2024-08-15T10:00:00', status: 'Confirmado' },
@@ -39,6 +25,8 @@ const appointments = [
 ]
 
 export default function DashboardPage() {
+  const { pets } = usePets();
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -59,25 +47,34 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-4">
-                {appointments.map(apt => (
-                    <li key={apt.id} className="flex items-center gap-4 p-2 rounded-lg hover:bg-accent">
-                        <Avatar className="h-10 w-10">
-                            <AvatarImage src={pets.find(p => p.name === apt.petName)?.avatarUrl} />
-                            <AvatarFallback>{apt.petName.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className='flex-1'>
-                            <p className="font-semibold">{apt.petName} - {apt.service}</p>
-                            <p className="text-sm text-muted-foreground">
-                                {new Date(apt.date).toLocaleDateString('pt-BR', {weekday: 'long', day: '2-digit', month: 'long'})} às {new Date(apt.date).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
-                            </p>
-                        </div>
-                        <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </li>
-                ))}
-            </ul>
+            {appointments.length > 0 ? (
+              <ul className="space-y-4">
+                  {appointments.map(apt => {
+                      const pet = pets.find(p => p.name === apt.petName);
+                      return (
+                          <li key={apt.id} className="flex items-center gap-4 p-2 rounded-lg hover:bg-accent">
+                              <Avatar className="h-10 w-10">
+                                  {pet && <AvatarImage src={pet.avatarUrl} />}
+                                  <AvatarFallback>{apt.petName.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div className='flex-1'>
+                                  <p className="font-semibold">{apt.petName} - {apt.service}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                      {new Date(apt.date).toLocaleDateString('pt-BR', {weekday: 'long', day: '2-digit', month: 'long'})} às {new Date(apt.date).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
+                                  </p>
+                              </div>
+                              <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                          </li>
+                      )
+                  })}
+              </ul>
+            ) : (
+               <div className="text-center text-muted-foreground p-8">
+                  <p>Nenhuma consulta agendada.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
         
