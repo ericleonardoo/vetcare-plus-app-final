@@ -19,7 +19,7 @@ export default function Hero() {
             />
         )}
       <div className="absolute inset-0 bg-black/50" />
-      <div className="relative container h-full flex flex-col items-center justify-center text-center text-white space-y-6 px-4 md:px-6">
+      <div className="relative container mx-auto h-full flex flex-col items-center justify-center text-center text-white space-y-6 px-4 md:px-6">
         <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl/none font-headline">
           Cuidado Excepcional para o Seu Melhor Amigo
         </h1>
