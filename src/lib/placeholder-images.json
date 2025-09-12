@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-image",
+      "description": "A happy dog playing outdoors.",
+      "imageUrl": "https://picsum.photos/seed/hero1/1200/800",
+      "imageHint": "happy dog"
+    },
+    {
+      "id": "vet-1",
+      "description": "Dr. Emily Carter, Chief Veterinarian",
+      "imageUrl": "https://picsum.photos/seed/vet1/400/400",
+      "imageHint": "woman smiling"
+    },
+    {
+      "id": "vet-2",
+      "description": "Dr. Ben Jacobs, Surgeon",
+      "imageUrl": "https://picsum.photos/seed/vet2/400/400",
+      "imageHint": "man professional"
+    },
+    {
+      "id": "vet-3",
+      "description": "Maria Garcia, Veterinary Technician",
+      "imageUrl": "https://picsum.photos/seed/vet3/400/400",
+      "imageHint": "woman professional"
+    },
+    {
+      "id": "vet-4",
+      "description": "David Chen, Animal Care Assistant",
+      "imageUrl": "https://picsum.photos/seed/vet4/400/400",
+      "imageHint": "man smiling"
+    }
+  ]
 }
