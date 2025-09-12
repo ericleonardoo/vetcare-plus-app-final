@@ -7,7 +7,8 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
-  CardDescription
+  CardDescription,
+  CardFooter
 } from "@/components/ui/card";
 import { 
   Table,
@@ -21,13 +22,15 @@ import { usePets } from "@/context/PetsContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Clock, PawPrint } from "lucide-react";
+import { ArrowUpRight, Clock, PawPrint, PhoneForwarded } from "lucide-react";
 import Link from "next/link";
+import { useNotifications } from "@/context/NotificationsContext";
 
 
 export default function ProfessionalDashboard() {
   const { appointments } = useAppointments();
   const { pets } = usePets();
+  const { notifications, clearNotifications } = useNotifications();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -113,7 +116,8 @@ export default function ProfessionalDashboard() {
         </Card>
       </div>
 
-       <Card>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+       <Card className="lg:col-span-4">
         <CardHeader className="flex flex-row items-center">
           <div className="grid gap-2">
             <CardTitle>Agenda do Dia</CardTitle>
@@ -182,6 +186,43 @@ export default function ProfessionalDashboard() {
           </Table>
         </CardContent>
       </Card>
+      <Card className="lg:col-span-3">
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <PhoneForwarded /> Atendimentos Pendentes do Chatbot
+            </CardTitle>
+            <CardDescription>
+                Usuários que solicitaram contato de um atendente através do chatbot.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            {notifications.length > 0 ? (
+                <ul className="space-y-4">
+                    {notifications.map(notif => (
+                        <li key={notif.id} className="p-3 bg-secondary rounded-lg">
+                            <h4 className="font-semibold">{notif.userName} - {notif.userContact}</h4>
+                            <p className="text-sm text-muted-foreground mt-1">"{notif.reason}"</p>
+                             <div className="text-xs text-muted-foreground/80 mt-2 text-right">
+                                {new Date(notif.timestamp).toLocaleString('pt-BR')}
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <div className="text-center text-muted-foreground p-8">
+                    <p>Nenhuma solicitação de atendimento pendente.</p>
+                </div>
+            )}
+        </CardContent>
+        {notifications.length > 0 && (
+             <CardFooter>
+                <Button variant="outline" className="w-full" onClick={clearNotifications}>
+                    Marcar todos como resolvidos
+                </Button>
+            </CardFooter>
+        )}
+      </Card>
+    </div>
     </>
   );
 }

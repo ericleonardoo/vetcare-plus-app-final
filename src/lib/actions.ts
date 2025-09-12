@@ -4,8 +4,27 @@
 import { suggestAppointmentTimes, SuggestAppointmentTimesInput, SuggestAppointmentTimesOutput } from "@/ai/flows/suggest-appointment-times";
 import { chat as chatFlow, ChatInput, ChatOutput } from "@/ai/flows/chat";
 import { generateCarePlan as generateCarePlanFlow, GenerateCarePlanInput, GenerateCarePlanOutput } from "@/ai/flows/generate-care-plan";
+import { scheduleHumanFollowUpFlow } from '@/ai/tools/clinic-tools';
+
 import { z } from "zod";
 import { subDays, addDays } from "date-fns";
+
+export const ScheduleHumanFollowUpInputSchema = z.object({
+  userName: z.string().describe('O nome do usuário que solicita o contato.'),
+  userContact: z.string().describe('A informação de contato do usuário (email ou telefone).'),
+  reason: z.string().describe('Um breve resumo do motivo pelo qual o usuário precisa de ajuda.'),
+});
+export type ScheduleHumanFollowUpInput = z.infer<typeof ScheduleHumanFollowUpInputSchema>;
+
+export const ScheduleHumanFollowUpOutputSchema = z.object({
+  id: z.number(),
+  userName: z.string(),
+  userContact: z.string(),
+  reason: z.string(),
+  timestamp: z.string().describe('O timestamp ISO 8601 de quando a notificação foi criada.'),
+});
+export type ScheduleHumanFollowUpOutput = z.infer<typeof ScheduleHumanFollowUpOutputSchema>;
+
 
 const appointmentFormSchema = z.object({
   ownerName: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
@@ -156,5 +175,15 @@ export async function generateCarePlan(data: GenerateCarePlanInput): Promise<{su
     } catch (error) {
         console.error("Erro no fluxo de IA para gerar plano de cuidados:", error);
         return { success: false, error: "Falha ao gerar o plano de cuidados. Tente novamente." };
+    }
+}
+
+export async function scheduleHumanFollowUp(input: ScheduleHumanFollowUpInput) {
+    try {
+        const result = await scheduleHumanFollowUpFlow(input);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error('Erro na ferramenta de IA scheduleHumanFollowUp', error);
+        return { success: false, error: 'Falha ao notificar o atendente.'}
     }
 }
