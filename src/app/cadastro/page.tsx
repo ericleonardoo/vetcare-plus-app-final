@@ -78,8 +78,21 @@ export default function CadastroPage() {
     } catch (error: any) {
       console.error("Erro no cadastro:", error);
       let errorMessage = "Ocorreu um erro ao criar a conta. Tente novamente.";
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = "Este endereço de e-mail já está em uso.";
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorMessage = "Este endereço de e-mail já está em uso.";
+            break;
+          case 'auth/invalid-email':
+            errorMessage = "O formato do e-mail é inválido.";
+            break;
+          case 'auth/weak-password':
+            errorMessage = "A senha é muito fraca. Use pelo menos 6 caracteres.";
+            break;
+          default:
+            errorMessage = `Ocorreu um erro inesperado. Código: ${error.code}`;
+            break;
+        }
       }
       toast({
         variant: 'destructive',

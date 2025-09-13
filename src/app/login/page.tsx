@@ -59,8 +59,23 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Erro no login:", error);
       let errorMessage = "Ocorreu um erro ao fazer login. Tente novamente.";
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        errorMessage = "E-mail ou senha inválidos.";
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            errorMessage = "E-mail ou senha inválidos.";
+            break;
+          case 'auth/invalid-email':
+            errorMessage = "O formato do e-mail é inválido.";
+            break;
+          case 'auth/too-many-requests':
+             errorMessage = "Acesso temporariamente bloqueado devido a muitas tentativas. Tente novamente mais tarde.";
+             break;
+          default:
+             errorMessage = `Ocorreu um erro inesperado. Código: ${error.code}`;
+             break;
+        }
       }
       toast({
         variant: 'destructive',
