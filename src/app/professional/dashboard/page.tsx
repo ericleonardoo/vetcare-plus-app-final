@@ -22,14 +22,14 @@ import { usePets } from "@/context/PetsContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Clock, PawPrint, PhoneForwarded } from "lucide-react";
+import { ArrowUpRight, Clock, PawPrint, PhoneForwarded, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/context/NotificationsContext";
 
 
 export default function ProfessionalDashboard() {
-  const { appointments } = useAppointments();
-  const { pets } = usePets();
+  const { appointments, loading: appointmentsLoading } = useAppointments();
+  const { pets, loading: petsLoading } = usePets();
   const { notifications, clearNotifications } = useNotifications();
 
   const today = new Date();
@@ -53,6 +53,8 @@ export default function ProfessionalDashboard() {
     return { totalToday, completed, totalPets };
   }, [upcomingAppointments, appointments, pets]);
 
+  const isLoading = appointmentsLoading || petsLoading;
+
 
   return (
     <>
@@ -72,7 +74,7 @@ export default function ProfessionalDashboard() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalToday}</div>
+            {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.totalToday}</div>}
             <p className="text-xs text-muted-foreground">
               {stats.totalToday > 0 ? `${stats.totalToday} agendadas para hoje` : "Nenhuma consulta para hoje"}
             </p>
@@ -84,7 +86,7 @@ export default function ProfessionalDashboard() {
             <PawPrint className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPets}</div>
+            {petsLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.totalPets}</div>}
             <p className="text-xs text-muted-foreground">
               pacientes cadastrados na clínica
             </p>
@@ -133,57 +135,63 @@ export default function ProfessionalDashboard() {
           </Button>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Horário</TableHead>
-                <TableHead>Paciente</TableHead>
-                <TableHead>Tutor(a)</TableHead>
-                <TableHead>Serviço</TableHead>
-                <TableHead className="text-right">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {upcomingAppointments.length > 0 ? (
-                upcomingAppointments.map((apt) => {
-                  const pet = pets.find((p) => p.id === apt.petId);
-                  return (
-                    <TableRow key={apt.id}>
-                        <TableCell className="font-semibold">
-                            {new Date(apt.date).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
-                        </TableCell>
-                       <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                                {pet && <AvatarImage src={pet.avatarUrl} alt={pet.name} />}
-                                <AvatarFallback>{apt.petName.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="font-medium">{apt.petName}</div>
-                          </div>
-                      </TableCell>
-                       <TableCell>Maria Silva</TableCell>
-                      <TableCell>
-                        <div className="hidden text-sm text-muted-foreground md:inline">
-                          {apt.service}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant={apt.status === "Confirmado" ? "default" : "secondary"}>
-                            {apt.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
+          {isLoading ? (
+            <div className="flex justify-center items-center h-48">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
-                    Nenhuma consulta agendada para hoje.
-                  </TableCell>
+                  <TableHead>Horário</TableHead>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead>Tutor(a)</TableHead>
+                  <TableHead>Serviço</TableHead>
+                  <TableHead className="text-right">Status</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {upcomingAppointments.length > 0 ? (
+                  upcomingAppointments.map((apt) => {
+                    const pet = pets.find((p) => p.id === apt.petId);
+                    return (
+                      <TableRow key={apt.id}>
+                          <TableCell className="font-semibold">
+                              {new Date(apt.date).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
+                          </TableCell>
+                        <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8">
+                                  {pet && <AvatarImage src={pet.avatarUrl} alt={pet.name} />}
+                                  <AvatarFallback>{apt.petName.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div className="font-medium">{apt.petName}</div>
+                            </div>
+                        </TableCell>
+                        <TableCell>Maria Silva</TableCell>
+                        <TableCell>
+                          <div className="hidden text-sm text-muted-foreground md:inline">
+                            {apt.service}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={apt.status === "Confirmado" ? "default" : "secondary"}>
+                              {apt.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center h-24">
+                      Nenhuma consulta agendada para hoje.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
       <Card className="lg:col-span-3">

@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { PlusCircle, ListFilter, File } from 'lucide-react';
+import { PlusCircle, ListFilter, File, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import {
   Table,
@@ -32,23 +32,30 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import { usePets } from '@/context/PetsContext';
 import { useAppointments, Appointment } from '@/context/AppointmentsContext';
 import { useMemo } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function AppointmentsPage() {
   const { pets } = usePets();
-  const { appointments } = useAppointments();
+  const { appointments, loading: appointmentsLoading } = useAppointments();
+  const { user } = useAuth();
+
+  const userAppointments = useMemo(() => {
+    if (!user) return [];
+    return appointments.filter(apt => apt.tutorId === user.uid);
+  }, [appointments, user]);
 
   const upcomingAppointments = useMemo(() => 
-    appointments
+    userAppointments
       .filter(apt => new Date(apt.date) >= new Date())
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()), 
-    [appointments]
+    [userAppointments]
   );
   
   const pastAppointments = useMemo(() => 
-    appointments
+    userAppointments
       .filter(apt => new Date(apt.date) < new Date())
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), 
-    [appointments]
+    [userAppointments]
   );
 
 
@@ -105,6 +112,21 @@ export default function AppointmentsPage() {
     </Table>
   );
 
+  const renderContent = () => {
+    if (appointmentsLoading) {
+      return (
+        <div className="flex justify-center items-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-2 text-muted-foreground">Carregando agendamentos...</p>
+        </div>
+      );
+    }
+    return (
+      <TabsContent value="proximos">
+        {upcomingAppointments.length > 0 ? renderAppointmentsTable(upcomingAppointments) : <p className="p-8 text-center text-muted-foreground">Nenhum próximo agendamento encontrado.</p>}
+      </TabsContent>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -158,12 +180,20 @@ export default function AppointmentsPage() {
         </div>
         <Card>
             <CardContent className='p-0'>
-                <TabsContent value="proximos">
-                    {upcomingAppointments.length > 0 ? renderAppointmentsTable(upcomingAppointments) : <p className="p-8 text-center text-muted-foreground">Nenhum próximo agendamento encontrado.</p>}
-                </TabsContent>
-                <TabsContent value="passados">
-                    {pastAppointments.length > 0 ? renderAppointmentsTable(pastAppointments) : <p className="p-8 text-center text-muted-foreground">Nenhum agendamento passado encontrado.</p>}
-                </TabsContent>
+                {appointmentsLoading ? (
+                     <div className="flex justify-center items-center p-20">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    </div>
+                ) : (
+                    <>
+                      <TabsContent value="proximos">
+                          {upcomingAppointments.length > 0 ? renderAppointmentsTable(upcomingAppointments) : <p className="p-8 text-center text-muted-foreground">Nenhum próximo agendamento encontrado.</p>}
+                      </TabsContent>
+                      <TabsContent value="passados">
+                          {pastAppointments.length > 0 ? renderAppointmentsTable(pastAppointments) : <p className="p-8 text-center text-muted-foreground">Nenhum agendamento passado encontrado.</p>}
+                      </TabsContent>
+                    </>
+                )}
             </CardContent>
         </Card>
       </Tabs>

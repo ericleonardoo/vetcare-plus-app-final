@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/card';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import { addDays, format, startOfDay, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAppointments } from '@/context/AppointmentsContext';
@@ -43,10 +43,11 @@ type NewAppointmentValues = z.infer<typeof newAppointmentSchema>;
 
 export default function AgendaPage() {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const { appointments, addAppointment } = useAppointments();
-    const { pets } = usePets();
+    const { appointments, addAppointment, loading: appointmentsLoading } = useAppointments();
+    const { pets, loading: petsLoading } = usePets();
     const { toast } = useToast();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isSubmitting, startSubmittingTransition] = useTransition();
 
     const form = useForm<NewAppointmentValues>({
         resolver: zodResolver(newAppointmentSchema),
@@ -72,28 +73,41 @@ export default function AgendaPage() {
     }
 
     const handleAddAppointment = (data: NewAppointmentValues) => {
-        const selectedPet = pets.find(p => String(p.id) === data.petId);
-        if (!selectedPet) return;
+        startSubmittingTransition(async () => {
+            const selectedPet = pets.find(p => String(p.id) === data.petId);
+            if (!selectedPet) return;
 
-        const [hours, minutes] = data.time.split(':');
-        const appointmentDate = new Date(currentDate);
-        appointmentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            const [hours, minutes] = data.time.split(':');
+            const appointmentDate = new Date(currentDate);
+            appointmentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-        addAppointment({
-            petId: selectedPet.id,
-            petName: selectedPet.name,
-            service: data.serviceType,
-            date: appointmentDate.toISOString(),
-            status: 'Confirmado',
-        }, data.vet);
+            try {
+                await addAppointment({
+                    petId: selectedPet.id,
+                    petName: selectedPet.name,
+                    service: data.serviceType,
+                    date: appointmentDate.toISOString(),
+                    status: 'Confirmado',
+                }, data.vet);
 
-        toast({
-            title: "Agendamento Criado!",
-            description: `A consulta para ${selectedPet.name} foi marcada com ${data.vet}.`
+                toast({
+                    title: "Agendamento Criado!",
+                    description: `A consulta para ${selectedPet.name} foi marcada com ${data.vet}.`
+                });
+                form.reset();
+                setIsModalOpen(false);
+            } catch (error) {
+                console.error("Erro ao agendar consulta:", error);
+                 toast({
+                    variant: 'destructive',
+                    title: "Erro",
+                    description: "Não foi possível agendar a consulta. Tente novamente."
+                });
+            }
         });
-        form.reset();
-        setIsModalOpen(false);
     }
+
+    const isLoading = appointmentsLoading || petsLoading;
 
 
   return (
@@ -118,8 +132,8 @@ export default function AgendaPage() {
             
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogTrigger asChild>
-                    <Button>
-                        <PlusCircle className='mr-2 h-4 w-4' />
+                    <Button disabled={petsLoading}>
+                        {petsLoading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <PlusCircle className='mr-2 h-4 w-4' />}
                         Nova Consulta
                     </Button>
                 </DialogTrigger>
@@ -135,7 +149,7 @@ export default function AgendaPage() {
                             <FormField control={form.control} name="petId" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Paciente</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                                         <FormControl><SelectTrigger><SelectValue placeholder="Selecione um pet" /></SelectTrigger></FormControl>
                                         <SelectContent>{pets.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
                                     </Select>
@@ -145,7 +159,7 @@ export default function AgendaPage() {
                              <FormField control={form.control} name="serviceType" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Serviço</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                                         <FormControl><SelectTrigger><SelectValue placeholder="Selecione um serviço" /></SelectTrigger></FormControl>
                                         <SelectContent>{services.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                                     </Select>
@@ -156,7 +170,7 @@ export default function AgendaPage() {
                                 <FormField control={form.control} name="vet" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Veterinário(a)</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
                                             <SelectContent>{vets.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
                                         </Select>
@@ -166,7 +180,7 @@ export default function AgendaPage() {
                                  <FormField control={form.control} name="time" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Horário</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
                                             <SelectContent>{timeSlots.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                                         </Select>
@@ -175,8 +189,11 @@ export default function AgendaPage() {
                                 )} />
                             </div>
                             <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline">Cancelar</Button></DialogClose>
-                                <Button type="submit">Confirmar Agendamento</Button>
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button></DialogClose>
+                                <Button type="submit" disabled={isSubmitting}>
+                                  {isSubmitting && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+                                  Confirmar Agendamento
+                                </Button>
                             </DialogFooter>
                         </form>
                     </Form>
@@ -189,42 +206,48 @@ export default function AgendaPage() {
       <Card className="flex-1">
         <CardContent className="p-0">
           <div className='overflow-x-auto'>
-             <div className="grid grid-cols-[auto_repeat(2,_minmax(200px,_1fr))] min-w-[800px]">
-                {/* Time Column */}
-                <div className="border-r">
-                    <div className="p-2 border-b h-20 flex items-center justify-center font-semibold">Horário</div>
-                    {timeSlots.map(time => (
-                        <div key={time} className="flex items-center justify-center border-b h-20 text-sm font-semibold text-muted-foreground">{time}</div>
+            {isLoading ? (
+                <div className="flex justify-center items-center h-96">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                </div>
+            ) : (
+                <div className="grid grid-cols-[auto_repeat(2,_minmax(200px,_1fr))] min-w-[800px]">
+                    {/* Time Column */}
+                    <div className="border-r">
+                        <div className="p-2 border-b h-20 flex items-center justify-center font-semibold">Horário</div>
+                        {timeSlots.map(time => (
+                            <div key={time} className="flex items-center justify-center border-b h-20 text-sm font-semibold text-muted-foreground">{time}</div>
+                        ))}
+                    </div>
+                    
+                    {/* Vet Columns */}
+                    {vets.map(vet => (
+                        <div key={vet} className="border-r last:border-r-0">
+                            <div className="p-2 border-b h-20 flex items-center justify-center text-center">
+                                <h3 className='font-bold text-lg'>{vet}</h3>
+                            </div>
+                            {timeSlots.map(slot => {
+                                const appointment = appointmentsByDay.find(a => {
+                                    const aptDate = new Date(a.date);
+                                    const aptTime = `${String(aptDate.getHours()).padStart(2,'0')}:${String(aptDate.getMinutes()).padStart(2,'0')}`;
+                                    return aptTime === slot && a.vet === vet;
+                                });
+
+                                return (
+                                    <div key={`${vet}-${slot}`} className="border-b h-20 p-1">
+                                        {appointment && (
+                                            <div className='bg-primary/10 border-l-4 border-primary text-primary-foreground p-2 rounded-md h-full flex flex-col justify-center text-left cursor-pointer hover:bg-primary/20'>
+                                                <p className='font-bold text-sm text-primary'>{appointment.petName}</p>
+                                                <p className='text-xs text-primary/80'>{appointment.service}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
                     ))}
                 </div>
-                
-                {/* Vet Columns */}
-                {vets.map(vet => (
-                    <div key={vet} className="border-r last:border-r-0">
-                        <div className="p-2 border-b h-20 flex items-center justify-center text-center">
-                            <h3 className='font-bold text-lg'>{vet}</h3>
-                        </div>
-                        {timeSlots.map(slot => {
-                            const appointment = appointmentsByDay.find(a => {
-                                const aptDate = new Date(a.date);
-                                const aptTime = `${String(aptDate.getHours()).padStart(2,'0')}:${String(aptDate.getMinutes()).padStart(2,'0')}`;
-                                return aptTime === slot && a.vet === vet;
-                            });
-
-                            return (
-                                <div key={`${vet}-${slot}`} className="border-b h-20 p-1">
-                                    {appointment && (
-                                        <div className='bg-primary/10 border-l-4 border-primary text-primary-foreground p-2 rounded-md h-full flex flex-col justify-center text-left cursor-pointer hover:bg-primary/20'>
-                                            <p className='font-bold text-sm text-primary'>{appointment.petName}</p>
-                                            <p className='text-xs text-primary/80'>{appointment.service}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </div>
-                ))}
-             </div>
+            )}
           </div>
         </CardContent>
       </Card>

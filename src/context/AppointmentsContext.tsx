@@ -1,13 +1,17 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode } from 'react';
-import type { Pet } from './PetsContext';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
+import { useAuth } from './AuthContext';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+
 
 export type AppointmentStatus = 'Confirmado' | 'Agendado' | 'Realizado';
 
 export type Appointment = {
-  id: number;
-  petId: number;
+  id: string; // Firestore document ID
+  tutorId: string;
+  petId: string;
   petName: string;
   service: string;
   date: string; // ISO string
@@ -17,35 +21,69 @@ export type Appointment = {
 
 type AppointmentsContextType = {
   appointments: Appointment[];
-  addAppointment: (appointment: Omit<Appointment, 'id'>, vet?: string) => void;
+  addAppointment: (appointment: Omit<Appointment, 'id' | 'tutorId'>, vet?: string) => Promise<void>;
+  loading: boolean;
 };
-
-const initialAppointments: Appointment[] = [
-    { id: 1, petId: 1, petName: 'Paçoca', service: 'Check-up de Rotina', date: new Date(new Date().setHours(10, 0, 0, 0)).toISOString(), status: 'Confirmado' as const, vet: 'Dra. Emily Carter' },
-    { id: 2, petId: 2, petName: 'Whiskers', service: 'Vacinação Anual', date: new Date(new Date().setHours(14, 30, 0, 0)).toISOString(), status: 'Confirmado' as const, vet: 'Dr. Ben Jacobs' },
-    { id: 3, petId: 1, petName: 'Paçoca', service: 'Limpeza Dental', date: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(), status: 'Realizado' as const, vet: 'Dra. Emily Carter' },
-    { id: 4, petId: 2, petName: 'Whiskers', service: 'Consulta de Emergência', date: new Date(new Date().setDate(new Date().getDate() - 20)).toISOString(), status: 'Realizado' as const, vet: 'Dr. Ben Jacobs' },
-    { id: 5, petId: 1, petName: 'Paçoca', service: 'Consulta para Cirurgia', date: new Date(new Date().setDate(new Date().getDate() + 10)).toISOString(), status: 'Agendado' as const, vet: 'Dr. Ben Jacobs' },
-];
 
 
 const AppointmentsContext = createContext<AppointmentsContextType | undefined>(undefined);
 
 export const AppointmentsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+  const { user } = useAuth();
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [vets] = useState(['Dra. Emily Carter', 'Dr. Ben Jacobs']);
 
-  const addAppointment = (appointment: Omit<Appointment, 'id' | 'vet'>, vet?: string) => {
-    const newAppointment: Appointment = {
-      ...appointment,
-      id: Date.now(),
-      vet: vet || vets[Math.floor(Math.random() * vets.length)], // Atribui um veterinário específico ou aleatório
+  const fetchAppointments = useCallback(async () => {
+    // No portal profissional, podemos querer buscar todos os agendamentos.
+    // No portal do cliente, apenas os do tutor logado.
+    // Por simplicidade do protótipo, vamos buscar todos por enquanto,
+    // mas em produção, isso seria refinado com base no papel do usuário.
+    setLoading(true);
+    try {
+        const appointmentsCollection = collection(db, 'appointments');
+        const querySnapshot = await getDocs(appointmentsCollection);
+        const allAppointments: Appointment[] = [];
+        querySnapshot.forEach((doc) => {
+            allAppointments.push({ id: doc.id, ...(doc.data() as Omit<Appointment, 'id'>) });
+        });
+        setAppointments(allAppointments);
+    } catch (error) {
+        console.error("Erro ao buscar agendamentos: ", error);
+    } finally {
+        setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Carrega os agendamentos quando o provedor é montado.
+    fetchAppointments();
+  }, [fetchAppointments]);
+
+
+  const addAppointment = async (appointmentData: Omit<Appointment, 'id'|'tutorId'>, vet?: string) => {
+    if (!user) throw new Error("Usuário não autenticado.");
+
+    const newAppointmentData = {
+      ...appointmentData,
+      tutorId: user.uid,
+      vet: vet || vets[Math.floor(Math.random() * vets.length)],
     };
-    setAppointments((prevAppointments) => [...prevAppointments, newAppointment]);
+
+    const docRef = await addDoc(collection(db, "appointments"), newAppointmentData);
+    
+    // Atualiza o estado local para feedback imediato
+    setAppointments((prevAppointments) => [
+        ...prevAppointments, 
+        { 
+            ...newAppointmentData, 
+            id: docRef.id,
+        }
+    ]);
   };
 
   return (
-    <AppointmentsContext.Provider value={{ appointments, addAppointment }}>
+    <AppointmentsContext.Provider value={{ appointments, addAppointment, loading }}>
       {children}
     </AppointmentsContext.Provider>
   );

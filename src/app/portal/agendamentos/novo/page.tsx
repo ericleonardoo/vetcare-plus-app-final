@@ -64,7 +64,8 @@ const FormSchema = z.object({
 type FormValues = z.infer<typeof FormSchema>;
 
 export default function NewAppointmentPage() {
-  const [isFindingTimes, startTransition] = useTransition();
+  const [isFindingTimes, startFindingTimesTransition] = useTransition();
+  const [isSubmitting, startSubmittingTransition] = useTransition();
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const { toast } = useToast();
   const [timeZone, setTimeZone] = useState('');
@@ -92,29 +93,40 @@ export default function NewAppointmentPage() {
 
 
   function onSubmit(data: FormValues) {
-    const selectedPet = pets.find(p => p.id === data.petId);
-    if (!selectedPet) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Pet não encontrado.',
-      });
-      return;
-    }
+     startSubmittingTransition(async () => {
+        const selectedPet = pets.find(p => p.id === data.petId);
+        if (!selectedPet) {
+          toast({
+            variant: 'destructive',
+            title: 'Erro',
+            description: 'Pet não encontrado.',
+          });
+          return;
+        }
 
-    addAppointment({
-      petId: selectedPet.id,
-      petName: selectedPet.name,
-      service: data.serviceType,
-      date: data.time,
-      status: 'Confirmado',
-    });
+        try {
+          await addAppointment({
+            petId: selectedPet.id,
+            petName: selectedPet.name,
+            service: data.serviceType,
+            date: data.time,
+            status: 'Confirmado',
+          });
 
-    toast({
-      title: "Agendamento Confirmado!",
-      description: `Sua consulta para ${selectedPet.name} no dia ${format(new Date(data.time), 'PPP', {locale: ptBR})} às ${format(new Date(data.time!), 'p', { locale: ptBR })} foi marcada.`,
-    });
-    router.push('/portal/agendamentos');
+          toast({
+            title: "Agendamento Confirmado!",
+            description: `Sua consulta para ${selectedPet.name} no dia ${format(new Date(data.time), 'PPP', {locale: ptBR})} às ${format(new Date(data.time!), 'p', { locale: ptBR })} foi marcada.`,
+          });
+          router.push('/portal/agendamentos');
+        } catch (error) {
+            console.error("Erro ao agendar consulta:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Erro',
+                description: 'Não foi possível agendar a consulta. Tente novamente.'
+            });
+        }
+     });
   }
 
   function onFindTimes() {
@@ -128,7 +140,7 @@ export default function NewAppointmentPage() {
         return;
     }
 
-    startTransition(async () => {
+    startFindingTimesTransition(async () => {
       const result = await getSuggestedTimesForPortal({
         serviceType,
         timeZone,
@@ -330,7 +342,10 @@ export default function NewAppointmentPage() {
 
             <div className="flex justify-end gap-2 pt-8">
                 <Button variant="outline" asChild><Link href="/portal/agendamentos">Cancelar</Link></Button>
-                <Button type="submit" disabled={!watch('time') || isFindingTimes}>Confirmar Agendamento</Button>
+                <Button type="submit" disabled={!watch('time') || isFindingTimes || isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Confirmar Agendamento
+                </Button>
             </div>
             </form>
           </Form>

@@ -16,21 +16,30 @@ import { usePets } from '@/context/PetsContext';
 import { useAppointments } from '@/context/AppointmentsContext';
 import { useMemo } from 'react';
 import { useTutor } from '@/context/TutorContext';
+import { useAuth } from '@/context/AuthContext';
 
 export default function DashboardPage() {
   const { pets, loading: petsLoading } = usePets();
-  const { appointments } = useAppointments();
+  const { appointments, loading: appointmentsLoading } = useAppointments();
   const { tutor, loading: tutorLoading } = useTutor();
+  const { user } = useAuth();
+
+
+  const userAppointments = useMemo(() => {
+    if (!user) return [];
+    return appointments.filter(apt => apt.tutorId === user.uid);
+  }, [appointments, user]);
+
 
   const upcomingAppointments = useMemo(() => 
-    appointments
+    userAppointments
       .filter(apt => new Date(apt.date) >= new Date())
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 5), // Limita a 5 agendamentos
-    [appointments]
+    [userAppointments]
   );
 
-  const isLoading = tutorLoading || petsLoading;
+  const isLoading = tutorLoading || petsLoading || appointmentsLoading;
 
   if (isLoading || !tutor) {
      return (
