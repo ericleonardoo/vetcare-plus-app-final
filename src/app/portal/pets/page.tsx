@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlusCircle, MoreVertical } from 'lucide-react';
+import { PlusCircle, MoreVertical, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import {
   DropdownMenu,
@@ -20,7 +20,16 @@ import { usePets } from '@/context/PetsContext';
 
 
 export default function PetsPage() {
-    const { pets } = usePets();
+    const { pets, loading } = usePets();
+
+    if (loading) {
+        return (
+             <div className="flex flex-col items-center justify-center gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-muted-foreground">Carregando seus pets...</p>
+            </div>
+        )
+    }
 
   return (
     <div className="flex flex-col gap-8">
@@ -44,12 +53,14 @@ export default function PetsPage() {
           <Card key={pet.id} className="overflow-hidden group">
             <CardHeader className="p-0 relative">
               <Link href={`/portal/pets/${pet.id}`}>
-                <img
-                  src={pet.avatarUrl}
-                  alt={pet.name}
-                  className="w-full h-48 object-cover"
-                  data-ai-hint={pet.avatarHint}
-                />
+                <div className='w-full h-48 bg-muted'>
+                  <img
+                    src={pet.avatarUrl}
+                    alt={pet.name}
+                    className="w-full h-48 object-cover"
+                    data-ai-hint={pet.avatarHint}
+                  />
+                </div>
               </Link>
               <div className="absolute top-2 right-2">
                 <DropdownMenu>

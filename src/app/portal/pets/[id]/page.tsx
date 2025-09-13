@@ -19,9 +19,9 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
   const { toast } = useToast();
   const [carePlan, setCarePlan] = useState<GenerateCarePlanOutput | null>(null);
   const router = useRouter();
-  const { pets } = usePets();
+  const { pets, loading: petsLoading } = usePets();
 
-  const pet = pets.find((p) => p.id === parseInt(params.id));
+  const pet = pets.find((p) => p.id === params.id);
 
 
   const handleGenerateCarePlan = () => {
@@ -50,13 +50,28 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
     });
   };
 
-  if (!pet) {
-    return (
+  if (petsLoading) {
+     return (
       <div className="text-center">
         <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Carregando dados do pet...</p>
       </div>
     );
+  }
+
+  if (!pet) {
+    return (
+        <div className='text-center'>
+            <p className='text-lg font-semibold'>Pet não encontrado</p>
+            <p className='text-muted-foreground'>Não foi possível encontrar os dados deste pet.</p>
+             <Button variant="outline" size="sm" asChild className='mt-4'>
+                <Link href="/portal/pets">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Voltar para Meus Pets
+                </Link>
+            </Button>
+        </div>
+    )
   }
   
   const PetIcon = pet.species === 'Gato' ? Cat : Dog;

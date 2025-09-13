@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition } from 'react';
 import { generateCarePlan } from '@/lib/actions';
 import type { GenerateCarePlanOutput } from '@/ai/flows/generate-care-plan';
-import { usePets, HealthHistoryItem } from '@/context/PetsContext';
+import { usePets } from '@/context/PetsContext';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -43,14 +43,15 @@ type NewHistoryEntryValues = z.infer<typeof newHistoryEntrySchema>;
 
 
 export default function ProfessionalPetRecordPage({ params }: { params: { id: string } }) {
-  const [isPending, startTransition] = useTransition();
+  const [isAIPending, startAITransition] = useTransition();
+  const [isHistoryPending, startHistoryTransition] = useTransition();
   const { toast } = useToast();
   const [carePlan, setCarePlan] = useState<GenerateCarePlanOutput | null>(null);
   const router = useRouter();
-  const { pets, addHealthHistoryEntry } = usePets();
+  const { pets, addHealthHistoryEntry, loading: petsLoading } = usePets();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const pet = pets.find((p) => p.id === parseInt(params.id));
+  const pet = pets.find((p) => p.id === params.id);
 
   const form = useForm<NewHistoryEntryValues>({
     resolver: zodResolver(newHistoryEntrySchema),
@@ -61,7 +62,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
 
   const handleGenerateCarePlan = () => {
     if (!pet) return;
-    startTransition(async () => {
+    startAITransition(async () => {
         const result = await generateCarePlan({
             species: pet.species,
             breed: pet.breed,
@@ -87,39 +88,44 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
 
   const handleAddHistoryEntry = (data: NewHistoryEntryValues) => {
     if (!pet) return;
-
-    const iconMapping = {
-      'Consulta': Stethoscope,
-      'Exame': ClipboardList,
-      'Vacina': Syringe,
-      'Emergência': Stethoscope,
-    };
-
-    const newEntry: HealthHistoryItem = {
-      date: new Date().toISOString().split('T')[0],
-      type: data.type as HealthHistoryItem['type'],
-      title: data.title,
-      vet: data.vet,
-      details: data.details,
-      icon: iconMapping[data.type as keyof typeof iconMapping],
-    };
-
-    addHealthHistoryEntry(pet.id, newEntry);
-    toast({
-      title: "Registro Adicionado!",
-      description: `Novo item de histórico de saúde adicionado para ${pet.name}.`
+    startHistoryTransition(async () => {
+      try {
+        await addHealthHistoryEntry(pet.id, data);
+        toast({
+          title: "Registro Adicionado!",
+          description: `Novo item de histórico de saúde adicionado para ${pet.name}.`
+        });
+        form.reset({vet: 'Dra. Emily Carter'});
+        setIsModalOpen(false);
+      } catch (error) {
+        console.error("Erro ao adicionar histórico: ", error);
+        toast({ variant: 'destructive', title: "Erro", description: "Não foi possível adicionar o registro."});
+      }
     });
-    form.reset();
-    setIsModalOpen(false);
   }
 
-  if (!pet) {
+  if (petsLoading) {
     return (
       <div className="text-center">
         <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Carregando dados do paciente...</p>
       </div>
     );
+  }
+
+  if (!pet) {
+     return (
+        <div className='text-center'>
+            <p className='text-lg font-semibold'>Paciente não encontrado</p>
+            <p className='text-muted-foreground'>Não foi possível encontrar os dados deste paciente.</p>
+             <Button variant="outline" size="sm" asChild className='mt-4'>
+                <Link href="/professional/pacientes">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Voltar para Pacientes
+                </Link>
+            </Button>
+        </div>
+    )
   }
   
   const PetIcon = pet.species === 'Gato' ? Cat : Dog;
@@ -203,7 +209,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                                             render={({ field }) => (
                                                 <FormItem>
                                                 <FormLabel>Tipo de Registro</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isHistoryPending}>
                                                     <FormControl>
                                                     <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
                                                     </FormControl>
@@ -225,7 +231,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                                                 <FormItem>
                                                 <FormLabel>Título / Procedimento</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="Ex: Vacina Antirrábica" {...field} />
+                                                    <Input placeholder="Ex: Vacina Antirrábica" {...field} disabled={isHistoryPending}/>
                                                 </FormControl>
                                                 <FormMessage />
                                                 </FormItem>
@@ -238,7 +244,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                                                 <FormItem>
                                                 <FormLabel>Veterinário Responsável</FormLabel>
                                                 <FormControl>
-                                                    <Input {...field} />
+                                                    <Input {...field} disabled={isHistoryPending}/>
                                                 </FormControl>
                                                 <FormMessage />
                                                 </FormItem>
@@ -251,7 +257,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                                                 <FormItem>
                                                 <FormLabel>Detalhes e Observações</FormLabel>
                                                 <FormControl>
-                                                    <Textarea placeholder="Descreva o que foi feito, diagnosticado ou prescrito..." {...field} />
+                                                    <Textarea placeholder="Descreva o que foi feito, diagnosticado ou prescrito..." {...field} disabled={isHistoryPending}/>
                                                 </FormControl>
                                                 <FormMessage />
                                                 </FormItem>
@@ -259,9 +265,12 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                                         />
                                         <DialogFooter>
                                             <DialogClose asChild>
-                                                <Button type="button" variant="outline">Cancelar</Button>
+                                                <Button type="button" variant="outline" disabled={isHistoryPending}>Cancelar</Button>
                                             </DialogClose>
-                                            <Button type="submit">Salvar Registro</Button>
+                                            <Button type="submit" disabled={isHistoryPending}>
+                                                {isHistoryPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Salvar Registro
+                                            </Button>
                                         </DialogFooter>
                                     </form>
                                 </Form>
@@ -329,8 +338,8 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                         )}
                     </CardContent>
                     <CardFooter className="border-t pt-4 flex justify-center">
-                         <Button onClick={handleGenerateCarePlan} disabled={isPending}>
-                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                         <Button onClick={handleGenerateCarePlan} disabled={isAIPending}>
+                            {isAIPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {carePlan ? "Gerar Novo Plano" : "Gerar Plano de Cuidados com IA"}
                         </Button>
                     </CardFooter>

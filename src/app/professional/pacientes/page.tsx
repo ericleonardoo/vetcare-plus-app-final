@@ -19,14 +19,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, PlusCircle, Users, Bone, Cat, Dog } from "lucide-react";
+import { ArrowUpRight, PlusCircle, Users, Bone, Cat, Dog, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useTutor } from "@/context/TutorContext";
 
 
 export default function ProfessionalPatientsPage() {
-  const { pets } = usePets();
-  const { tutor } = useTutor();
+  const { pets, loading: petsLoading } = usePets();
+  const { tutor, loading: tutorLoading } = useTutor();
 
   const getPetIcon = (species: string) => {
     switch (species) {
@@ -35,6 +35,8 @@ export default function ProfessionalPatientsPage() {
         default: return Bone;
     }
   }
+
+  const isLoading = petsLoading || tutorLoading;
 
   return (
     <>
@@ -60,7 +62,7 @@ export default function ProfessionalPatientsPage() {
           <div className="grid gap-2">
             <CardTitle>Todos os Pacientes</CardTitle>
             <CardDescription>
-             Total de {pets.length} pacientes cadastrados na clínica.
+             {!isLoading && `Total de ${pets.length} pacientes cadastrados na clínica.`}
             </CardDescription>
           </div>
         </CardHeader>
@@ -76,7 +78,16 @@ export default function ProfessionalPatientsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pets.length > 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center h-24">
+                     <div className="flex justify-center items-center gap-2">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <span className="text-muted-foreground">Carregando pacientes...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : pets.length > 0 ? (
                 pets.map((pet) => {
                   const Icon = getPetIcon(pet.species);
                   return (
@@ -97,7 +108,7 @@ export default function ProfessionalPatientsPage() {
                         </div>
                       </TableCell>
                        <TableCell>{pet.breed}</TableCell>
-                       <TableCell>{tutor.name}</TableCell>
+                       <TableCell>{tutor?.name || 'N/A'}</TableCell>
                       <TableCell className="text-right">
                          <Button asChild variant="outline" size="sm">
                             <Link href={`/professional/pacientes/${pet.id}`}>Ver Prontuário</Link>

@@ -1,7 +1,10 @@
 'use client';
 
 import { Stethoscope, Syringe, ClipboardList } from 'lucide-react';
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
+import { useAuth } from './AuthContext';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, addDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 export type HealthHistoryItem = {
   date: string;
@@ -9,122 +12,155 @@ export type HealthHistoryItem = {
   title: string;
   vet: string;
   details: string;
-  icon: React.ElementType;
+  // O ícone não será armazenado no firestore, será mapeado no frontend.
 };
 
 export type Pet = {
-  id: number;
+  id: string; // Firestore document ID
+  tutorId: string;
   name: string;
   species: string;
   breed: string;
-  age: string;
   birthDate: string;
   gender: 'Macho' | 'Fêmea' | string;
   avatarUrl: string;
   avatarHint: string;
-  healthHistory: HealthHistoryItem[];
+  healthHistory: (Omit<HealthHistoryItem, 'icon'>)[];
 };
+
+type PetWithAge = Pet & { age: string; healthHistory: (HealthHistoryItem & {icon: React.ElementType})[] };
+
 
 type PetsContextType = {
-  pets: Pet[];
-  addPet: (pet: Omit<Pet, 'healthHistory' | 'id'> & { id?: number }) => void;
-  updatePet: (id: number, updatedPet: Partial<Pet>) => void;
-  deletePet: (id: number) => void;
-  addHealthHistoryEntry: (petId: number, entry: HealthHistoryItem) => void;
+  pets: PetWithAge[];
+  addPet: (pet: Omit<Pet, 'id' | 'tutorId' | 'healthHistory'>) => Promise<void>;
+  updatePet: (id: string, updatedPet: Partial<Pet>) => void;
+  deletePet: (id: string) => void;
+  addHealthHistoryEntry: (petId: string, entry: Omit<HealthHistoryItem, 'icon'|'date'>) => Promise<void>;
+  loading: boolean;
 };
 
-const initialPets: Pet[] = [
-  {
-    id: 1,
-    name: 'Paçoca',
-    species: 'Cachorro',
-    breed: 'Vira-lata Caramelo',
-    get age() {
-      const birthDate = new Date(this.birthDate);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-      }
-      return `${age} anos`;
-    },
-    birthDate: '2021-05-10',
-    gender: 'Macho',
-    avatarUrl: 'https://picsum.photos/seed/brasil1/200/200',
-    avatarHint: 'dog brazil',
-    healthHistory: [
-        { date: '2024-07-20', type: 'Consulta', title: 'Limpeza Dental', vet: 'Dra. Emily Carter', details: 'Procedimento de limpeza dental realizado com sucesso.', icon: Stethoscope },
-        { date: '2024-03-10', type: 'Vacina', title: 'Vacina Polivalente (V10)', vet: 'Dra. Emily Carter', details: 'Dose de reforço anual da vacina V10.', icon: Syringe },
-    ]
-  },
-  {
-    id: 2,
-    name: 'Whiskers',
-    species: 'Gato',
-    breed: 'Siamês',
-     get age() {
-      const birthDate = new Date(this.birthDate);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-      }
-      return `${age} anos`;
-    },
-    birthDate: '2019-08-25',
-    gender: 'Macho',
-    avatarUrl: 'https://picsum.photos/seed/pet2/200/200',
-    avatarHint: 'siamese cat',
-     healthHistory: [
-      { date: '2024-06-05', type: 'Emergência', title: 'Consulta de Emergência', vet: 'Dr. Ben Jacobs', details: 'Apresentou apatia e falta de apetite. Diagnosticado com infecção gástrica leve.', icon: Stethoscope },
-      { date: '2023-12-15', type: 'Exame', title: 'Exames de Sangue', vet: 'Dr. Ben Jacobs', details: 'Hemograma completo e perfil bioquímico. Todos os resultados dentro dos parâmetros normais.', icon: ClipboardList },
-    ]
-  },
-];
+const initialPets: PetWithAge[] = [];
+
+const iconMapping = {
+    'Consulta': Stethoscope,
+    'Emergência': Stethoscope,
+    'Exame': ClipboardList,
+    'Vacina': Syringe,
+};
+
+const calculateAge = (birthDate: string): string => {
+    const birth = new Date(birthDate);
+    const today = new Date();
+    let ageYears = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        ageYears--;
+    }
+    return `${ageYears} anos`;
+}
 
 
 const PetsContext = createContext<PetsContextType | undefined>(undefined);
 
 export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [pets, setPets] = useState<Pet[]>(initialPets);
+  const { user } = useAuth();
+  const [pets, setPets] = useState<PetWithAge[]>(initialPets);
+  const [loading, setLoading] = useState(true);
 
-  const addPet = (petData: Omit<Pet, 'healthHistory' | 'id'> & { id?: number }) => {
-     const newPet: Pet = {
-      id: petData.id || Date.now(),
-      healthHistory: [],
-      ...petData,
+  const fetchPets = useCallback(async () => {
+    if (!user) {
+      setPets([]);
+      setLoading(false);
+      return;
     };
-    setPets((prevPets) => [...prevPets, newPet]);
+    setLoading(true);
+    try {
+      const petsCollection = collection(db, 'pets');
+      const q = query(petsCollection, where('tutorId', '==', user.uid));
+      const querySnapshot = await getDocs(q);
+      const userPets: PetWithAge[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data() as Omit<Pet, 'id'>;
+        userPets.push({ 
+            ...data, 
+            id: doc.id,
+            age: calculateAge(data.birthDate),
+            healthHistory: data.healthHistory.map(hh => ({...hh, icon: iconMapping[hh.type]}))
+        });
+      });
+      setPets(userPets);
+    } catch (error) {
+      console.error("Erro ao buscar pets: ", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchPets();
+  }, [fetchPets]);
+
+  const addPet = async (petData: Omit<Pet, 'id' | 'tutorId'|'healthHistory'>) => {
+    if (!user) throw new Error("Usuário não autenticado.");
+
+    const newPetData = {
+      ...petData,
+      tutorId: user.uid,
+      healthHistory: [],
+    };
+    
+    const docRef = await addDoc(collection(db, "pets"), newPetData);
+    
+    // Atualiza o estado local para feedback imediato
+    setPets((prevPets) => [
+        ...prevPets, 
+        { 
+            ...newPetData, 
+            id: docRef.id, 
+            age: calculateAge(newPetData.birthDate),
+            healthHistory: [] 
+        }
+    ]);
   };
 
-  const updatePet = (id: number, updatedPet: Partial<Pet>) => {
-    setPets((prevPets) =>
-      prevPets.map((pet) => (pet.id === id ? { ...pet, ...updatedPet } : pet))
-    );
+  const updatePet = (id: string, updatedPet: Partial<Pet>) => {
+    // Implementação pendente
+    console.log('Update pet (not implemented)', id, updatedPet);
   };
 
-  const deletePet = (id: number) => {
-    setPets((prevPets) => prevPets.filter((pet) => pet.id !== id));
+  const deletePet = (id: string) => {
+    // Implementação pendente
+     console.log('Delete pet (not implemented)', id);
   };
   
-  const addHealthHistoryEntry = (petId: number, entry: HealthHistoryItem) => {
-    setPets(prevPets => 
-        prevPets.map(pet => {
-            if (pet.id === petId) {
-                return {
-                    ...pet,
-                    healthHistory: [...pet.healthHistory, entry]
-                };
-            }
-            return pet;
-        })
-    );
+  const addHealthHistoryEntry = async (petId: string, entry: Omit<HealthHistoryItem, 'icon'|'date'>) => {
+     if (!user) throw new Error("Usuário não autenticado.");
+     
+     const newEntry = {
+         ...entry,
+         date: new Date().toISOString().split('T')[0],
+     }
+
+     const petRef = doc(db, 'pets', petId);
+     await updateDoc(petRef, {
+         healthHistory: arrayUnion(newEntry)
+     });
+
+    // Atualiza o estado local para feedback imediato
+     setPets(prevPets => prevPets.map(p => {
+         if (p.id === petId) {
+             return {
+                 ...p,
+                 healthHistory: [...p.healthHistory, {...newEntry, icon: iconMapping[newEntry.type]}]
+             }
+         }
+         return p;
+     }));
   };
 
   return (
-    <PetsContext.Provider value={{ pets, addPet, updatePet, deletePet, addHealthHistoryEntry }}>
+    <PetsContext.Provider value={{ pets, addPet, updatePet, deletePet, addHealthHistoryEntry, loading }}>
       {children}
     </PetsContext.Provider>
   );
@@ -137,5 +173,3 @@ export const usePets = () => {
   }
   return context;
 };
-
-    

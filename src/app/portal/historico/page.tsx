@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
-  FileText,
+  FileText, Loader2,
 } from 'lucide-react';
 import {
   Select,
@@ -21,7 +21,7 @@ import { usePets } from '@/context/PetsContext';
 import { useMemo, useState } from 'react';
 
 export default function HealthHistoryPage() {
-  const { pets } = usePets();
+  const { pets, loading } = usePets();
   const [selectedPetId, setSelectedPetId] = useState('todos');
 
   const allHistoryItems = useMemo(() => {
@@ -39,6 +39,15 @@ export default function HealthHistoryPage() {
       return pet && String(pet.id) === selectedPetId;
     });
   }, [allHistoryItems, selectedPetId, pets]);
+
+  if (loading) {
+    return (
+         <div className="flex flex-col items-center justify-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Carregando histórico de saúde...</p>
+        </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -126,5 +135,3 @@ export default function HealthHistoryPage() {
     </div>
   );
 }
-
-    

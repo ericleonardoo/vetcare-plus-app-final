@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Camera } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,6 +34,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { usePets } from '@/context/PetsContext';
 import { useToast } from '@/hooks/use-toast';
+import { useState, useTransition } from 'react';
+import { Label } from '@/components/ui/label';
 
 const petFormSchema = z.object({
   name: z.string().min(2, { message: "O nome é obrigatório." }),
@@ -50,6 +52,7 @@ export default function NewPetPage() {
   const { addPet } = usePets();
   const router = useRouter();
   const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<PetFormValues>({
     resolver: zodResolver(petFormSchema),
@@ -61,30 +64,29 @@ export default function NewPetPage() {
   });
 
   function onSubmit(data: PetFormValues) {
-    const newPet = {
-      id: Date.now(),
-      ...data,
-      avatarUrl: `https://picsum.photos/seed/${data.name}/200/200`,
-      avatarHint: `${data.species} ${data.breed}`,
-      healthHistory: [],
-      // Calculando a idade a partir da data de nascimento
-      get age() {
-        const birthDate = new Date(this.birthDate);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
+    startTransition(async () => {
+        try {
+            const newPetPayload = {
+                ...data,
+                avatarUrl: `https://picsum.photos/seed/${data.name}/200/200`,
+                avatarHint: `${data.species} ${data.breed}`,
+            };
+            await addPet(newPetPayload);
+            toast({
+              title: "Pet Adicionado!",
+              description: `${data.name} agora faz parte da sua família VetCare+.`,
+            });
+            router.push('/portal/pets');
+
+        } catch(error) {
+            console.error("Erro ao adicionar pet:", error);
+            toast({
+                variant: 'destructive',
+                title: "Erro",
+                description: "Não foi possível adicionar o pet. Tente novamente."
+            });
         }
-        return `${age} anos`;
-      }
-    };
-    addPet(newPet);
-    toast({
-      title: "Pet Adicionado!",
-      description: `${data.name} agora faz parte da sua família VetCare+.`,
     });
-    router.push('/portal/pets');
   }
 
   return (
@@ -123,7 +125,7 @@ export default function NewPetPage() {
                     <FormItem>
                       <FormLabel>Nome do Pet</FormLabel>
                       <FormControl>
-                        <Input placeholder="Paçoca" {...field} />
+                        <Input placeholder="Paçoca" {...field} disabled={isPending} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -135,7 +137,7 @@ export default function NewPetPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Espécie</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione a espécie" />
@@ -161,7 +163,7 @@ export default function NewPetPage() {
                     <FormItem>
                       <FormLabel>Raça</FormLabel>
                       <FormControl>
-                        <Input placeholder="Vira-lata Caramelo" {...field} />
+                        <Input placeholder="Vira-lata Caramelo" {...field} disabled={isPending}/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -174,7 +176,7 @@ export default function NewPetPage() {
                     <FormItem>
                       <FormLabel>Data de Nascimento</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input type="date" {...field} disabled={isPending}/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -188,7 +190,7 @@ export default function NewPetPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gênero</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione o gênero" />
@@ -211,7 +213,7 @@ export default function NewPetPage() {
                     <FormItem>
                       <FormLabel>Notas Adicionais</FormLabel>
                       <FormControl>
-                        <Textarea id="notes" placeholder="Alergias, comportamentos, etc." {...field} />
+                        <Textarea id="notes" placeholder="Alergias, comportamentos, etc." {...field} disabled={isPending}/>
                       </FormControl>
                        <FormMessage />
                     </FormItem>
@@ -222,7 +224,10 @@ export default function NewPetPage() {
                 <Button variant="outline" asChild>
                   <Link href="/portal/pets">Cancelar</Link>
                 </Button>
-                <Button type="submit">Salvar Pet</Button>
+                <Button type="submit" disabled={isPending}>
+                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Salvar Pet
+                </Button>
               </div>
             </form>
           </Form>

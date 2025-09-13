@@ -92,7 +92,7 @@ export default function NewAppointmentPage() {
 
 
   function onSubmit(data: FormValues) {
-    const selectedPet = pets.find(p => p.id === parseInt(data.petId));
+    const selectedPet = pets.find(p => p.id === data.petId);
     if (!selectedPet) {
       toast({
         variant: 'destructive',

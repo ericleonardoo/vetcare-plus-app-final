@@ -18,9 +18,9 @@ import { useMemo } from 'react';
 import { useTutor } from '@/context/TutorContext';
 
 export default function DashboardPage() {
-  const { pets } = usePets();
+  const { pets, loading: petsLoading } = usePets();
   const { appointments } = useAppointments();
-  const { tutor, loading: isTutorLoading } = useTutor();
+  const { tutor, loading: tutorLoading } = useTutor();
 
   const upcomingAppointments = useMemo(() => 
     appointments
@@ -30,7 +30,9 @@ export default function DashboardPage() {
     [appointments]
   );
 
-  if (isTutorLoading || !tutor) {
+  const isLoading = tutorLoading || petsLoading;
+
+  if (isLoading || !tutor) {
      return (
          <div className="flex flex-col items-center justify-center gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
