@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Regra Geral: Nega acesso a qualquer documento não especificado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Coleção de Tutores
+    // - Permite que um usuário crie seu próprio documento de tutor.
+    // - Permite que um usuário leia, atualize ou delete seu próprio documento.
+    // - Permite que profissionais ('vet') leiam qualquer perfil de tutor.
+    match /tutors/{userId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && request.auth.token.email.matches('.*vet.*');
+    }
+
+    // Coleção de Pets
+    // - Permite que um usuário crie um pet se o 'tutorId' for o seu próprio UID.
+    // - Permite que um usuário leia, atualize ou delete um pet que pertence a ele.
+    // - Permite que profissionais leiam qualquer documento de pet.
+    match /pets/{petId} {
+      allow create: if request.auth != null && request.resource.data.tutorId == request.auth.uid;
+      allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/pets/$(petId)).data.tutorId == request.auth.uid;
+      allow read, update: if request.auth != null && request.auth.token.email.matches('.*vet.*');
+    }
+    
+    // Coleção de Agendamentos
+    // - Permite que um usuário crie um agendamento se o 'tutorId' for o seu próprio UID.
+    // - Permite que um usuário leia seus próprios agendamentos.
+    // - Permite que profissionais criem e leiam todos os agendamentos.
+    match /appointments/{appointmentId} {
+       allow create: if request.auth != null && (request.resource.data.tutorId == request.auth.uid || request.auth.token.email.matches('.*vet.*'));
+       allow read: if request.auth != null && (get(/databases/$(database)/documents/appointments/$(appointmentId)).data.tutorId == request.auth.uid || request.auth.token.email.matches('.*vet.*'));
+       allow update, delete: if request.auth != null && request.auth.token.email.matches('.*vet.*'); // Apenas profissionais podem alterar/deletar
+    }
+  }
+}
