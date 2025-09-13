@@ -5,7 +5,7 @@ import ProfessionalSidebar from '@/components/vetcare/ProfessionalSidebar';
 import { AppointmentsProvider } from '@/context/AppointmentsContext';
 import { NotificationsProvider } from '@/context/NotificationsContext';
 import { PetsProvider } from '@/context/PetsContext';
-import { TutorProvider } from '@/context/TutorContext';
+import { TutorsProvider } from '@/context/TutorsContext';
 import ProfessionalHeader from '@/components/vetcare/ProfessionalHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -28,7 +28,7 @@ export default function ProfessionalLayout({
   }
 
   return (
-    <TutorProvider>
+    <TutorsProvider>
       <PetsProvider>
         <AppointmentsProvider>
           <NotificationsProvider>
@@ -44,6 +44,8 @@ export default function ProfessionalLayout({
           </NotificationsProvider>
         </AppointmentsProvider>
       </PetsProvider>
-    </TutorProvider>
+    </TutorsProvider>
   );
 }
+
+    

@@ -26,66 +26,35 @@ export const TutorProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) {
-      // Se a autenticação ainda está carregando, não faça nada.
+    if (authLoading || !user) {
+      setTutor(null);
+      setLoading(!authLoading);
       return;
     }
 
-    let unsubscribe: Unsubscribe | undefined = undefined;
-
-    if (user) {
-      // Usuário está logado, comece a buscar os dados do tutor
-      setLoading(true);
-      const docRef = doc(db, 'tutors', user.uid);
-      
-      unsubscribe = onSnapshot(docRef, async (docSnap) => {
-        if (docSnap.exists()) {
-          setTutor(docSnap.data() as Tutor);
-        } else {
-          // Documento não existe, vamos criar um perfil inicial para este novo usuário
-          try {
-            const initialTutorData: Tutor = {
-              name: user.displayName || 'Novo Tutor',
-              email: user.email || '',
-              phone: user.phoneNumber || '',
-            };
-            await setDoc(docRef, initialTutorData);
-            // O onSnapshot será acionado novamente após a criação do doc, atualizando o estado
-          } catch(error) {
-            console.error("Erro ao criar documento do tutor:", error);
-          }
-        }
-        setLoading(false);
-      }, (error) => {
-        console.error("Erro no listener do tutor:", error);
-        setLoading(false);
-      });
-
-    } else {
-      // Nenhum usuário logado, então limpe os dados e pare de carregar
-      setTutor(null);
+    const docRef = doc(db, 'tutors', user.uid);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setTutor(docSnap.data() as Tutor);
+      } else {
+        // This case should be rare now since registration creates the doc
+        console.warn(`Tutor document not found for user ${user.uid}`);
+      }
       setLoading(false);
-    }
-    
-    // Função de limpeza para desinscrever do listener do onSnapshot
-    return () => {
-        if (unsubscribe) {
-            unsubscribe();
-        }
-    };
+    }, (error) => {
+      console.error("Erro no listener do tutor:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [user, authLoading]);
 
 
   const updateTutor = (tutorData: Partial<Tutor>) => {
-    // Esta função agora serve apenas para atualizações otimistas no lado do cliente,
-    // se necessário, mas a fonte da verdade é o Firestore.
-    // A atualização real deve ser feita via uma server action que modifica o Firestore.
     setTutor((prevTutor) => (prevTutor ? { ...prevTutor, ...tutorData } : null));
   };
 
 
-  // Não exibe um spinner aqui, pois o layout pai ou a página que o consome
-  // deve lidar com o estado de carregamento para evitar spinners múltiplos.
   return (
     <TutorContext.Provider value={{ tutor, updateTutor, loading }}>
       {children}
@@ -100,3 +69,5 @@ export const useTutor = () => {
   }
   return context;
 };
+
+    

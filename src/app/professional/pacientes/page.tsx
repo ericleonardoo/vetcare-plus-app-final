@@ -17,16 +17,15 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, PlusCircle, Users, Bone, Cat, Dog, Loader2 } from "lucide-react";
+import { PlusCircle, Users, Bone, Cat, Dog, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useTutor } from "@/context/TutorContext";
+import { useTutors } from "@/context/TutorsContext";
 
 
 export default function ProfessionalPatientsPage() {
   const { pets, loading: petsLoading } = usePets();
-  const { tutor, loading: tutorLoading } = useTutor();
+  const { tutors, loading: tutorsLoading } = useTutors();
 
   const getPetIcon = (species: string) => {
     switch (species) {
@@ -36,7 +35,7 @@ export default function ProfessionalPatientsPage() {
     }
   }
 
-  const isLoading = petsLoading || tutorLoading;
+  const isLoading = petsLoading || tutorsLoading;
 
   return (
     <>
@@ -90,6 +89,7 @@ export default function ProfessionalPatientsPage() {
               ) : pets.length > 0 ? (
                 pets.map((pet) => {
                   const Icon = getPetIcon(pet.species);
+                  const tutor = tutors.find(t => t.id === pet.tutorId);
                   return (
                     <TableRow key={pet.id}>
                        <TableCell>
@@ -131,3 +131,5 @@ export default function ProfessionalPatientsPage() {
     </>
   );
 }
+
+    

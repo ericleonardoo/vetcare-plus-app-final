@@ -30,8 +30,6 @@ export default function PortalLayout({
     return null; 
   }
 
-  // O conteúdo do portal só será renderizado se houver um usuário.
-  // Os provedores de contexto internos cuidarão de seus próprios estados de carregamento.
   return (
     <TutorProvider>
       <PetsProvider>
@@ -48,3 +46,5 @@ export default function PortalLayout({
     </TutorProvider>
   );
 }
+
+    

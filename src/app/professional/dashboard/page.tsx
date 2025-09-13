@@ -27,13 +27,15 @@ import Link from "next/link";
 import { useNotifications } from "@/context/NotificationsContext";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { useTutor } from "@/context/TutorContext";
+import { startOfWeek, eachDayOfInterval, format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 
 export default function ProfessionalDashboard() {
   const { appointments, loading: appointmentsLoading } = useAppointments();
   const { pets, loading: petsLoading } = usePets();
   const { notifications, clearNotifications } = useNotifications();
-  const { tutor } = useTutor();
+  const { tutor, loading: tutorLoading } = useTutor();
 
 
   const today = new Date();
@@ -63,17 +65,33 @@ export default function ProfessionalDashboard() {
     return { totalToday, totalPets, totalTutors };
   }, [appointments, pets, today]);
 
-  const chartData = [
-    { name: "Seg", total: Math.floor(Math.random() * 20) + 10 },
-    { name: "Ter", total: Math.floor(Math.random() * 20) + 10 },
-    { name: "Qua", total: Math.floor(Math.random() * 20) + 10 },
-    { name: "Qui", total: Math.floor(Math.random() * 20) + 10 },
-    { name: "Sex", total: Math.floor(Math.random() * 20) + 10 },
-    { name: "Sab", total: Math.floor(Math.random() * 10) + 5 },
-    { name: "Dom", total: 0 },
-  ]
+  const chartData = useMemo(() => {
+    const start = startOfWeek(today, { weekStartsOn: 1 }); // Começa na segunda
+    const weekDays = eachDayOfInterval({ start, end: new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000) });
+    
+    const data = weekDays.map(day => ({
+      name: format(day, 'EEE', { locale: ptBR }),
+      total: 0,
+    }));
 
-  const isLoading = appointmentsLoading || petsLoading;
+    appointments.forEach(apt => {
+      const aptDate = parseISO(apt.date);
+      const dayIndex = (aptDate.getDay() + 6) % 7; // Seg=0, Dom=6
+      const weekStartDay = start.getDate();
+      const aptDay = aptDate.getDate();
+
+      if(aptDate >= start && aptDate <= new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000)) {
+         if (data[dayIndex]) {
+            data[dayIndex].total += 1;
+         }
+      }
+    });
+
+    return data;
+  }, [appointments, today]);
+
+
+  const isLoading = appointmentsLoading || petsLoading || tutorLoading;
 
 
   return (
@@ -220,7 +238,7 @@ export default function ProfessionalDashboard() {
                 Visão Geral da Semana
             </CardTitle>
             <CardDescription>
-                Número de consultas agendadas para os últimos 7 dias.
+                Número de consultas agendadas para a semana atual.
             </CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
@@ -239,6 +257,7 @@ export default function ProfessionalDashboard() {
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(value) => `${value}`}
+                  allowDecimals={false}
                 />
                 <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -285,3 +304,5 @@ export default function ProfessionalDashboard() {
     </>
   );
 }
+
+    
