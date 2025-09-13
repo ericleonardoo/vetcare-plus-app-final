@@ -2,12 +2,13 @@
 'use client';
 
 import Link from 'next/link';
-import { PawPrint } from 'lucide-react';
+import { PawPrint, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +20,8 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 
 const signupSchema = z.object({
@@ -37,6 +40,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 export default function CadastroPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -49,17 +53,29 @@ export default function CadastroPage() {
     },
   });
 
-  const onSubmit = (data: SignupFormValues) => {
-    // Em um app real, aqui você faria a chamada para a sua API de cadastro.
-    console.log("Dados do cadastro:", data);
-    toast({
-      title: "Conta Criada com Sucesso!",
-      description: "Você será redirecionado para a página de login.",
-    });
-    // Simula uma pequena espera e redireciona para o login
-    setTimeout(() => {
-      router.push('/login');
-    }, 1500);
+  const onSubmit = async (data: SignupFormValues) => {
+    setIsLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      toast({
+        title: "Conta Criada com Sucesso!",
+        description: "Você será redirecionado para o seu portal.",
+      });
+      // O AuthContext cuidará do redirecionamento
+    } catch (error: any) {
+      console.error("Erro no cadastro:", error);
+      let errorMessage = "Ocorreu um erro ao criar a conta. Tente novamente.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "Este endereço de e-mail já está em uso.";
+      }
+      toast({
+        variant: 'destructive',
+        title: "Erro no Cadastro",
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
 
@@ -87,7 +103,7 @@ export default function CadastroPage() {
                     <FormItem>
                       <FormLabel>Nome Completo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Maria da Silva" {...field} />
+                        <Input placeholder="Maria da Silva" {...field} disabled={isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -100,7 +116,7 @@ export default function CadastroPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="seu@email.com" {...field} />
+                        <Input type="email" placeholder="seu@email.com" {...field} disabled={isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -113,7 +129,7 @@ export default function CadastroPage() {
                     <FormItem>
                       <FormLabel>Telefone</FormLabel>
                       <FormControl>
-                        <Input type="tel" placeholder="(11) 98765-4321" {...field} />
+                        <Input type="tel" placeholder="(11) 98765-4321" {...field} disabled={isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -126,7 +142,7 @@ export default function CadastroPage() {
                     <FormItem>
                       <FormLabel>Senha</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} />
+                        <Input type="password" {...field} disabled={isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -139,13 +155,14 @@ export default function CadastroPage() {
                     <FormItem>
                       <FormLabel>Confirmar Senha</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} />
+                        <Input type="password" {...field} disabled={isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Criar Conta
                 </Button>
               </form>

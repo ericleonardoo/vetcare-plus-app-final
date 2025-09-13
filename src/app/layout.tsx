@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import Chatbot from '@/components/vetcare/Chatbot';
+import { AuthProvider } from '@/context/AuthContext';
 
 export const metadata: Metadata = {
   title: 'VetCare+',
@@ -24,9 +25,11 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased font-normal">
-        {children}
-        <Chatbot />
-        <Toaster />
+        <AuthProvider>
+          {children}
+          <Chatbot />
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

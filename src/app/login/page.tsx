@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { PawPrint, LogIn } from 'lucide-react';
+import { PawPrint, LogIn, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,6 +20,10 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useState } from 'react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
@@ -31,6 +35,8 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -41,17 +47,28 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    // Em um app real, aqui você faria a chamada para a sua API de autenticação.
-    console.log("Dados do login:", data);
-    
-    // Simulação de lógicas de redirecionamento diferentes.
-    if (data.email === 'vet@vetcare.com' || data.isProfessional) {
-        // Redireciona para o painel profissional se for um email específico ou se o checkbox estiver marcado
-        router.push('/professional/dashboard');
-    } else {
-        // Redireciona para o portal do cliente para todos os outros usuários
-        router.push('/portal/dashboard');
+  const onSubmit = async (data: LoginFormValues) => {
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+      toast({
+        title: "Login bem-sucedido!",
+        description: "Redirecionando para o seu portal...",
+      });
+      // A lógica de redirecionamento agora é tratada pelo AuthContext
+    } catch (error: any) {
+      console.error("Erro no login:", error);
+      let errorMessage = "Ocorreu um erro ao fazer login. Tente novamente.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        errorMessage = "E-mail ou senha inválidos.";
+      }
+      toast({
+        variant: 'destructive',
+        title: "Erro no Login",
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,7 +96,7 @@ export default function LoginPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="seu@email.com" {...field} />
+                        <Input type="email" placeholder="seu@email.com" {...field} disabled={isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -92,7 +109,7 @@ export default function LoginPage() {
                     <FormItem>
                       <FormLabel>Senha</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} />
+                        <Input type="password" {...field} disabled={isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -108,6 +125,7 @@ export default function LoginPage() {
                                     <Checkbox
                                         checked={field.value}
                                         onCheckedChange={field.onChange}
+                                        disabled={isLoading}
                                     />
                                 </FormControl>
                                 <div className="space-y-1 leading-none">
@@ -122,8 +140,9 @@ export default function LoginPage() {
                         Esqueceu sua senha?
                     </Link>
                 </div>
-                <Button type="submit" className="w-full">
-                  <LogIn className="mr-2 h-4 w-4" /> Entrar
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+                   Entrar
                 </Button>
               </form>
             </Form>
