@@ -4,7 +4,7 @@ import { Stethoscope, Syringe, ClipboardList } from 'lucide-react';
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, updateDoc, arrayUnion, deleteDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
 export type HealthHistoryItem = {
   date: string;
@@ -40,8 +40,6 @@ type PetsContextType = {
   loading: boolean;
 };
 
-const initialPets: PetWithAge[] = [];
-
 const iconMapping = {
     'Consulta': Stethoscope,
     'Emergência': Stethoscope,
@@ -58,78 +56,73 @@ const calculateAge = (birthDate: string): string => {
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
         ageYears--;
     }
-    return `${ageYears} anos`;
+    let ageMonths = today.getMonth() - birth.getMonth();
+    if (ageMonths < 0) {
+        ageMonths += 12;
+    }
+
+    if(ageYears > 0) {
+      return `${ageYears} ano(s)`;
+    }
+    return `${ageMonths} mes(es)`;
 }
 
 
 const PetsContext = createContext<PetsContextType | undefined>(undefined);
 
 export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const [pets, setPets] = useState<PetWithAge[]>(initialPets);
+  const { user, loading: authLoading } = useAuth();
+  const [pets, setPets] = useState<PetWithAge[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchPets = useCallback(async () => {
-    if (!user) {
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+    
+    setLoading(true);
+    let unsubscribe: Unsubscribe | undefined = undefined;
+    
+    if (user) {
+      const petsCollection = collection(db, 'pets');
+      let q;
+
+      if (user.email?.includes('vet')) {
+          q = query(petsCollection); // Profissional vê todos os pets
+      } else {
+          q = query(petsCollection, where('tutorId', '==', user.uid)); // Cliente vê apenas os seus
+      }
+
+      unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const userPets: PetWithAge[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data() as Omit<Pet, 'id'>;
+          userPets.push({ 
+              ...data, 
+              id: doc.id,
+              age: calculateAge(data.birthDate),
+              healthHistory: data.healthHistory ? data.healthHistory.map(hh => ({...hh, icon: iconMapping[hh.type]})) : []
+          });
+        });
+        setPets(userPets);
+        setLoading(false);
+      }, (error) => {
+        console.error("Erro ao buscar pets: ", error);
+        setLoading(false);
+      });
+
+    } else {
       setPets([]);
       setLoading(false);
-      return;
+    }
+    
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
-    setLoading(true);
-    try {
-      const petsCollection = collection(db, 'pets');
-      const q = query(petsCollection, where('tutorId', '==', user.uid));
-      const querySnapshot = await getDocs(q);
-      const userPets: PetWithAge[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() as Omit<Pet, 'id'>;
-        userPets.push({ 
-            ...data, 
-            id: doc.id,
-            age: calculateAge(data.birthDate),
-            healthHistory: data.healthHistory ? data.healthHistory.map(hh => ({...hh, icon: iconMapping[hh.type]})) : []
-        });
-      });
-      setPets(userPets);
-    } catch (error) {
-      console.error("Erro ao buscar pets: ", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  }, [user, authLoading]);
 
-  useEffect(() => {
-    // Para um ambiente multi-usuário real, você pode querer buscar todos os pets
-    // se o usuário for um profissional. Por enquanto, mantemos a lógica do tutor.
-    if (user?.email?.includes('vet')) {
-        fetchAllPets();
-    } else {
-        fetchPets();
-    }
-  }, [user, fetchPets]);
-
-   const fetchAllPets = useCallback(async () => {
-    setLoading(true);
-    try {
-      const petsCollection = collection(db, 'pets');
-      const querySnapshot = await getDocs(petsCollection);
-      const allPets: PetWithAge[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() as Omit<Pet, 'id'>;
-        allPets.push({ 
-            ...data, 
-            id: doc.id,
-            age: calculateAge(data.birthDate),
-            healthHistory: data.healthHistory ? data.healthHistory.map(hh => ({...hh, icon: iconMapping[hh.type]})) : []
-        });
-      });
-      setPets(allPets);
-    } catch (error) {
-      console.error("Erro ao buscar todos os pets: ", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   const addPet = async (petData: Omit<Pet, 'id' | 'tutorId'|'healthHistory'>) => {
     if (!user) throw new Error("Usuário não autenticado.");
@@ -140,34 +133,22 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       healthHistory: [],
     };
     
-    const docRef = await addDoc(collection(db, "pets"), newPetData);
-    
-    setPets((prevPets) => [
-        ...prevPets, 
-        { 
-            ...newPetData, 
-            id: docRef.id, 
-            age: calculateAge(newPetData.birthDate),
-            healthHistory: [] 
-        }
-    ]);
+    await addDoc(collection(db, "pets"), newPetData);
+    // O onSnapshot vai cuidar de atualizar a lista.
   };
 
   const updatePet = async (id: string, updatedPetData: Partial<Omit<Pet, 'id' | 'tutorId'>>) => {
      if (!user) throw new Error("Usuário não autenticado.");
      const petRef = doc(db, 'pets', id);
      await updateDoc(petRef, updatedPetData);
-
-     setPets(prevPets => prevPets.map(p => 
-        p.id === id ? { ...p, ...updatedPetData, age: calculateAge(updatedPetData.birthDate || p.birthDate) } : p
-     ));
+     // O onSnapshot vai cuidar de atualizar a lista.
   };
 
   const deletePet = async (id: string) => {
     if (!user) throw new Error("Usuário não autenticado.");
     const petRef = doc(db, 'pets', id);
     await deleteDoc(petRef);
-    setPets(prevPets => prevPets.filter(p => p.id !== id));
+    // O onSnapshot vai cuidar de atualizar a lista.
   };
   
   const addHealthHistoryEntry = async (petId: string, entry: Omit<HealthHistoryItem, 'icon'|'date'>) => {
@@ -182,16 +163,7 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
      await updateDoc(petRef, {
          healthHistory: arrayUnion(newEntry)
      });
-
-     setPets(prevPets => prevPets.map(p => {
-         if (p.id === petId) {
-             return {
-                 ...p,
-                 healthHistory: [...p.healthHistory, {...newEntry, icon: iconMapping[newEntry.type]}]
-             }
-         }
-         return p;
-     }));
+     // O onSnapshot vai cuidar de atualizar a lista.
   };
 
   return (

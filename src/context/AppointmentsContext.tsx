@@ -3,7 +3,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
 
 export type AppointmentStatus = 'Confirmado' | 'Agendado' | 'Realizado';
@@ -29,36 +29,58 @@ type AppointmentsContextType = {
 const AppointmentsContext = createContext<AppointmentsContextType | undefined>(undefined);
 
 export const AppointmentsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [vets] = useState(['Dra. Emily Carter', 'Dr. Ben Jacobs']);
 
-  const fetchAppointments = useCallback(async () => {
-    // No portal profissional, podemos querer buscar todos os agendamentos.
-    // No portal do cliente, apenas os do tutor logado.
-    // Por simplicidade do protótipo, vamos buscar todos por enquanto,
-    // mas em produção, isso seria refinado com base no papel do usuário.
+  useEffect(() => {
+    if (authLoading) {
+      // Se a autenticação ainda está carregando, não faça nada.
+      return;
+    }
+    
     setLoading(true);
-    try {
+    let unsubscribe: Unsubscribe | undefined = undefined;
+
+    if (user) {
+        // Usuário logado, busca os agendamentos
         const appointmentsCollection = collection(db, 'appointments');
-        const querySnapshot = await getDocs(appointmentsCollection);
-        const allAppointments: Appointment[] = [];
-        querySnapshot.forEach((doc) => {
-            allAppointments.push({ id: doc.id, ...(doc.data() as Omit<Appointment, 'id'>) });
+        let q;
+
+        if (user.email?.includes('vet')) {
+            // Profissional pode ver todos os agendamentos
+            q = query(appointmentsCollection);
+        } else {
+            // Cliente só pode ver os seus
+            q = query(appointmentsCollection, where('tutorId', '==', user.uid));
+        }
+
+        unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const allAppointments: Appointment[] = [];
+            querySnapshot.forEach((doc) => {
+                allAppointments.push({ id: doc.id, ...(doc.data() as Omit<Appointment, 'id'>) });
+            });
+            setAppointments(allAppointments);
+            setLoading(false);
+        }, (error) => {
+            console.error("Erro ao buscar agendamentos: ", error);
+            setLoading(false);
         });
-        setAppointments(allAppointments);
-    } catch (error) {
-        console.error("Erro ao buscar agendamentos: ", error);
-    } finally {
+
+    } else {
+        // Nenhum usuário logado, estado vazio
+        setAppointments([]);
         setLoading(false);
     }
-  }, []);
 
-  useEffect(() => {
-    // Carrega os agendamentos quando o provedor é montado.
-    fetchAppointments();
-  }, [fetchAppointments]);
+    // Função de limpeza para desinscrever do listener do onSnapshot
+    return () => {
+        if (unsubscribe) {
+            unsubscribe();
+        }
+    };
+  }, [user, authLoading]);
 
 
   const addAppointment = async (appointmentData: Omit<Appointment, 'id'|'tutorId'>, vet?: string) => {
@@ -70,16 +92,8 @@ export const AppointmentsProvider: React.FC<{ children: ReactNode }> = ({ childr
       vet: vet || vets[Math.floor(Math.random() * vets.length)],
     };
 
-    const docRef = await addDoc(collection(db, "appointments"), newAppointmentData);
-    
-    // Atualiza o estado local para feedback imediato
-    setAppointments((prevAppointments) => [
-        ...prevAppointments, 
-        { 
-            ...newAppointmentData, 
-            id: docRef.id,
-        }
-    ]);
+    await addDoc(collection(db, "appointments"), newAppointmentData);
+    // Não é mais necessário atualizar o estado localmente, o onSnapshot fará isso.
   };
 
   return (

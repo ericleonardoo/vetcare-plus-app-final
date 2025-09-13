@@ -41,6 +41,7 @@ export default function AppointmentsPage() {
 
   const userAppointments = useMemo(() => {
     if (!user) return [];
+    // A busca agora é feita com 'where' no contexto, mas uma filtragem dupla garante.
     return appointments.filter(apt => apt.tutorId === user.uid);
   }, [appointments, user]);
 
@@ -111,22 +112,6 @@ export default function AppointmentsPage() {
         </TableBody>
     </Table>
   );
-
-  const renderContent = () => {
-    if (appointmentsLoading) {
-      return (
-        <div className="flex justify-center items-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="ml-2 text-muted-foreground">Carregando agendamentos...</p>
-        </div>
-      );
-    }
-    return (
-      <TabsContent value="proximos">
-        {upcomingAppointments.length > 0 ? renderAppointmentsTable(upcomingAppointments) : <p className="p-8 text-center text-muted-foreground">Nenhum próximo agendamento encontrado.</p>}
-      </TabsContent>
-    );
-  };
 
   return (
     <div className="flex flex-col gap-8">

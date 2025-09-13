@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Input } from '../ui/input';
+import { auth } from '@/lib/firebase';
 
 const navLinks = [
     { href: "/professional/dashboard", icon: Home, label: "Dashboard" },
@@ -30,6 +31,10 @@ const navLinks = [
 export default function ProfessionalSidebar() {
     const pathname = usePathname();
     const vetImage = PlaceHolderImages.find((img) => img.id === 'vet-1');
+
+    const handleLogout = () => {
+      auth.signOut();
+    }
 
   return (
     <aside className="hidden w-72 flex-col border-r bg-background p-4 md:flex">
@@ -84,13 +89,13 @@ export default function ProfessionalSidebar() {
             <span className='text-xs'>Veterinária Chefe</span>
           </div>
         </div>
-         <Link
-          href="/"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+         <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left"
         >
           <LogOut className="h-4 w-4" />
           Sair
-        </Link>
+        </button>
       </div>
     </aside>
   );

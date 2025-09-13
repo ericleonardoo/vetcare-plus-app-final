@@ -52,8 +52,13 @@ export default function ProfilePage() {
     });
 
     useEffect(() => {
+        // Redefine o formulário apenas quando os dados do tutor forem carregados
         if (tutor) {
-            form.reset(tutor);
+            form.reset({
+                name: tutor.name || '',
+                email: tutor.email || '',
+                phone: tutor.phone || '',
+            });
         }
     }, [tutor, form]);
 
@@ -83,9 +88,8 @@ export default function ProfilePage() {
 
     if (isTutorLoading) {
        return (
-         <div className="flex flex-col items-center gap-4">
+         <div className="flex justify-center items-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Carregando seu perfil...</p>
         </div>
        )
     }
@@ -129,7 +133,7 @@ export default function ProfilePage() {
                         <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                            <Input type="email" {...field} disabled={isPending} />
+                            <Input type="email" {...field} disabled={isPending || !!user?.email} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -165,7 +169,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex justify-end pt-4">
                     <Button type="submit" disabled={isPending || isTutorLoading}>
-                         {(isPending || isTutorLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                         {(isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Salvar Alterações
                     </Button>
                 </div>
