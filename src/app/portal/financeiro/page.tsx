@@ -1,4 +1,6 @@
 
+'use client';
+
 import {
   Card,
   CardContent,
@@ -16,9 +18,11 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Download, Wallet } from 'lucide-react';
+import { Download, Wallet, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
-const invoices = [
+// Dados de exemplo, que viriam do Firestore no futuro.
+const invoicesData = [
   {
     invoiceId: 'FAT-00125',
     date: '2024-07-20',
@@ -54,6 +58,11 @@ const invoices = [
 ];
 
 export default function FinancialPage() {
+  // Simula um estado de carregamento, que seria real com o Firestore.
+  const [loading, setLoading] = useState(false);
+  const [invoices, setInvoices] = useState(invoicesData);
+
+
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'Pago':
@@ -95,33 +104,47 @@ export default function FinancialPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoices.map((invoice) => (
-                <TableRow key={invoice.invoiceId}>
-                  <TableCell className="font-medium">
-                    {invoice.invoiceId}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(invoice.date + 'T12:00:00').toLocaleDateString(
-                      'pt-BR',
-                      { day: '2-digit', month: '2-digit', year: 'numeric' }
-                    )}
-                  </TableCell>
-                  <TableCell>{invoice.petName}</TableCell>
-                  <TableCell>{invoice.service}</TableCell>
-                  <TableCell className="text-right">{invoice.amount}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={getStatusVariant(invoice.status)}>
-                      {invoice.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="icon">
-                      <Download className="h-4 w-4" />
-                      <span className="sr-only">Baixar Fatura</span>
-                    </Button>
-                  </TableCell>
+              {loading ? (
+                 <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+                    </TableCell>
                 </TableRow>
-              ))}
+              ) : invoices.length > 0 ? (
+                invoices.map((invoice) => (
+                    <TableRow key={invoice.invoiceId}>
+                    <TableCell className="font-medium">
+                        {invoice.invoiceId}
+                    </TableCell>
+                    <TableCell>
+                        {new Date(invoice.date + 'T12:00:00').toLocaleDateString(
+                        'pt-BR',
+                        { day: '2-digit', month: '2-digit', year: 'numeric' }
+                        )}
+                    </TableCell>
+                    <TableCell>{invoice.petName}</TableCell>
+                    <TableCell>{invoice.service}</TableCell>
+                    <TableCell className="text-right">{invoice.amount}</TableCell>
+                    <TableCell className="text-center">
+                        <Badge variant={getStatusVariant(invoice.status)}>
+                        {invoice.status}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <Button variant="outline" size="icon">
+                        <Download className="h-4 w-4" />
+                        <span className="sr-only">Baixar Fatura</span>
+                        </Button>
+                    </TableCell>
+                    </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                        Nenhuma fatura encontrada.
+                    </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

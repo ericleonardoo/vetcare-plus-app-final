@@ -22,15 +22,19 @@ import { usePets } from "@/context/PetsContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Clock, PawPrint, PhoneForwarded, Loader2 } from "lucide-react";
+import { ArrowUpRight, Clock, PawPrint, PhoneForwarded, Loader2, Users } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/context/NotificationsContext";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
+import { useTutor } from "@/context/TutorContext";
 
 
 export default function ProfessionalDashboard() {
   const { appointments, loading: appointmentsLoading } = useAppointments();
   const { pets, loading: petsLoading } = usePets();
   const { notifications, clearNotifications } = useNotifications();
+  const { tutor } = useTutor();
+
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -39,19 +43,35 @@ export default function ProfessionalDashboard() {
     appointments
       .filter(apt => {
         const aptDate = new Date(apt.date);
-        aptDate.setHours(0,0,0,0);
-        return aptDate.getTime() === today.getTime() && apt.status !== 'Realizado';
+        return aptDate.getTime() >= today.getTime() && apt.status !== 'Realizado';
       })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 5),
     [appointments, today]
   );
   
   const stats = useMemo(() => {
-    const totalToday = upcomingAppointments.length;
-    const completed = appointments.filter(apt => new Date(apt.date).getTime() < new Date().getTime()).length;
+    const totalToday = appointments.filter(apt => {
+        const aptDate = new Date(apt.date);
+        aptDate.setHours(0,0,0,0);
+        return aptDate.getTime() === today.getTime();
+      }).length;
+
     const totalPets = pets.length;
-    return { totalToday, completed, totalPets };
-  }, [upcomingAppointments, appointments, pets]);
+    const totalTutors = new Set(pets.map(p => p.tutorId)).size;
+
+    return { totalToday, totalPets, totalTutors };
+  }, [appointments, pets, today]);
+
+  const chartData = [
+    { name: "Seg", total: Math.floor(Math.random() * 20) + 10 },
+    { name: "Ter", total: Math.floor(Math.random() * 20) + 10 },
+    { name: "Qua", total: Math.floor(Math.random() * 20) + 10 },
+    { name: "Qui", total: Math.floor(Math.random() * 20) + 10 },
+    { name: "Sex", total: Math.floor(Math.random() * 20) + 10 },
+    { name: "Sab", total: Math.floor(Math.random() * 10) + 5 },
+    { name: "Dom", total: 0 },
+  ]
 
   const isLoading = appointmentsLoading || petsLoading;
 
@@ -63,7 +83,7 @@ export default function ProfessionalDashboard() {
           Olá, Dra. Emily!
         </h1>
         <p className="text-muted-foreground">
-          Bem-vinda ao seu painel. Aqui está um resumo do seu dia.
+          Bem-vinda ao seu painel. Aqui está um resumo do seu dia e da semana.
         </p>
       </header>
 
@@ -94,25 +114,25 @@ export default function ProfessionalDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Conclusão (Mês)</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">92.5%</div>
+            {petsLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.totalTutors}</div>}
             <p className="text-xs text-muted-foreground">
-              +15.2% em relação ao mês passado
+              tutores ativos na plataforma
             </p>
           </CardContent>
         </Card>
          <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Novos Pacientes (Mês)</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Faturamento (Mês)</CardTitle>
+            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+12</div>
+            <div className="text-2xl font-bold">R$ 12,234.56</div>
             <p className="text-xs text-muted-foreground">
-              +8% em relação ao mês passado
+              +18.1% em relação ao mês passado
             </p>
           </CardContent>
         </Card>
@@ -122,9 +142,9 @@ export default function ProfessionalDashboard() {
        <Card className="lg:col-span-4">
         <CardHeader className="flex flex-row items-center">
           <div className="grid gap-2">
-            <CardTitle>Agenda do Dia</CardTitle>
+            <CardTitle>Próximas Consultas</CardTitle>
             <CardDescription>
-             Estes são os seus compromissos para hoje, {today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}.
+             Estes são os seus próximos compromissos.
             </CardDescription>
           </div>
           <Button asChild size="sm" className="ml-auto gap-1">
@@ -145,8 +165,8 @@ export default function ProfessionalDashboard() {
                 <TableRow>
                   <TableHead>Horário</TableHead>
                   <TableHead>Paciente</TableHead>
-                  <TableHead>Tutor(a)</TableHead>
-                  <TableHead>Serviço</TableHead>
+                  <TableHead className="hidden sm:table-cell">Tutor(a)</TableHead>
+                  <TableHead className="hidden md:table-cell">Serviço</TableHead>
                   <TableHead className="text-right">Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -157,6 +177,8 @@ export default function ProfessionalDashboard() {
                     return (
                       <TableRow key={apt.id}>
                           <TableCell className="font-semibold">
+                              {new Date(apt.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})}
+                              {' às '}
                               {new Date(apt.date).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
                           </TableCell>
                         <TableCell>
@@ -168,11 +190,9 @@ export default function ProfessionalDashboard() {
                               <div className="font-medium">{apt.petName}</div>
                             </div>
                         </TableCell>
-                        <TableCell>Maria Silva</TableCell>
-                        <TableCell>
-                          <div className="hidden text-sm text-muted-foreground md:inline">
-                            {apt.service}
-                          </div>
+                        <TableCell className="hidden sm:table-cell">{tutor?.name || 'N/A'}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {apt.service}
                         </TableCell>
                         <TableCell className="text-right">
                           <Badge variant={apt.status === "Confirmado" ? "default" : "secondary"}>
@@ -185,7 +205,7 @@ export default function ProfessionalDashboard() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center h-24">
-                      Nenhuma consulta agendada para hoje.
+                      Nenhuma próxima consulta agendada.
                     </TableCell>
                   </TableRow>
                 )}
@@ -195,6 +215,38 @@ export default function ProfessionalDashboard() {
         </CardContent>
       </Card>
       <Card className="lg:col-span-3">
+        <CardHeader>
+            <CardTitle>
+                Visão Geral da Semana
+            </CardTitle>
+            <CardDescription>
+                Número de consultas agendadas para os últimos 7 dias.
+            </CardDescription>
+        </CardHeader>
+        <CardContent className="pl-2">
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData}>
+                <XAxis
+                  dataKey="name"
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${value}`}
+                />
+                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    </div>
+    <Card>
         <CardHeader>
             <CardTitle className="flex items-center gap-2">
                 <PhoneForwarded /> Atendimentos Pendentes do Chatbot
@@ -230,7 +282,6 @@ export default function ProfessionalDashboard() {
             </CardFooter>
         )}
       </Card>
-    </div>
     </>
   );
 }
