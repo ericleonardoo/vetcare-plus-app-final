@@ -7,7 +7,6 @@ import {
   Home,
   Users,
   Calendar,
-  ClipboardList,
   LogOut,
   PawPrint,
   Settings,
@@ -21,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Input } from '../ui/input';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/context/AuthContext';
 
 const navLinks = [
     { href: "/professional/dashboard", icon: Home, label: "Dashboard" },
@@ -32,10 +31,7 @@ const navLinks = [
 export default function ProfessionalSidebar() {
     const pathname = usePathname();
     const vetImage = PlaceHolderImages.find((img) => img.id === 'vet-1');
-
-    const handleLogout = () => {
-      auth.signOut();
-    }
+    const { logout } = useAuth();
 
   return (
     <aside className="hidden w-72 flex-col border-r bg-background p-4 md:flex">
@@ -80,6 +76,16 @@ export default function ProfessionalSidebar() {
       </nav>
       <div className="mt-auto p-2">
         <Separator className='my-2' />
+         <Link
+            href="/professional/perfil"
+            className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted",
+                pathname.startsWith('/professional/perfil') && "bg-muted text-primary"
+            )}
+            >
+            <Settings className="h-4 w-4" />
+            Meu Perfil
+         </Link>
          <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground">
           <Avatar className='w-9 h-9'>
             {vetImage && <AvatarImage src={vetImage.imageUrl} />}
@@ -90,13 +96,14 @@ export default function ProfessionalSidebar() {
             <span className='text-xs'>Veterinária Chefe</span>
           </div>
         </div>
-         <button
-          onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left"
+         <Button
+          variant="ghost"
+          onClick={logout}
+          className="flex w-full items-center justify-start gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left"
         >
           <LogOut className="h-4 w-4" />
           Sair
-        </button>
+        </Button>
       </div>
     </aside>
   );

@@ -7,8 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 import { PetsProvider } from '@/context/PetsContext';
 import { TutorProvider } from '@/context/TutorContext';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
 import React from 'react';
+import PortalHeader from '@/components/vetcare/PortalHeader';
 
 export default function PortalLayout({
   children,
@@ -38,7 +38,10 @@ export default function PortalLayout({
         <AppointmentsProvider>
           <div className="flex min-h-screen w-full bg-secondary">
             <PortalSidebar />
-            <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+            <div className="flex flex-1 flex-col">
+              <PortalHeader />
+              <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+            </div>
           </div>
         </AppointmentsProvider>
       </PetsProvider>

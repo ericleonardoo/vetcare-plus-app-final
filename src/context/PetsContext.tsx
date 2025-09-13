@@ -1,10 +1,12 @@
+
 'use client';
 
 import { Stethoscope, Syringe, ClipboardList } from 'lucide-react';
-import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, doc, updateDoc, arrayUnion, deleteDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { db, storage } from '@/lib/firebase';
+import { collection, query, where, doc, updateDoc, arrayUnion, deleteDoc, onSnapshot, Unsubscribe, addDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export type HealthHistoryItem = {
   date: string;
@@ -12,7 +14,6 @@ export type HealthHistoryItem = {
   title: string;
   vet: string;
   details: string;
-  // O ícone não será armazenado no firestore, será mapeado no frontend.
 };
 
 export type Pet = {
@@ -30,11 +31,23 @@ export type Pet = {
 
 type PetWithAge = Pet & { age: string; healthHistory: (HealthHistoryItem & {icon: React.ElementType})[] };
 
+export type AddPetData = {
+  name: string;
+  species: string;
+  breed: string;
+  birthDate: string;
+  gender: 'Macho' | 'Fêmea' | string;
+  notes?: string;
+  avatarFile?: File;
+};
+
+export type UpdatePetData = Partial<AddPetData>;
+
 
 type PetsContextType = {
   pets: PetWithAge[];
-  addPet: (pet: Omit<Pet, 'id' | 'tutorId' | 'healthHistory'>) => Promise<void>;
-  updatePet: (id: string, updatedPet: Partial<Omit<Pet, 'id' | 'tutorId'>>) => Promise<void>;
+  addPet: (pet: AddPetData) => Promise<void>;
+  updatePet: (id: string, updatedPet: UpdatePetData) => Promise<void>;
   deletePet: (id: string) => Promise<void>;
   addHealthHistoryEntry: (petId: string, entry: Omit<HealthHistoryItem, 'icon'|'date'>) => Promise<void>;
   loading: boolean;
@@ -80,10 +93,10 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
     
-    setLoading(true);
     let unsubscribe: Unsubscribe | undefined = undefined;
     
     if (user) {
+      setLoading(true);
       const petsCollection = collection(db, 'pets');
       let q;
 
@@ -111,7 +124,7 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setLoading(false);
       });
 
-    } else {
+    } else if (!authLoading) {
       setPets([]);
       setLoading(false);
     }
@@ -124,31 +137,57 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user, authLoading]);
 
 
-  const addPet = async (petData: Omit<Pet, 'id' | 'tutorId'|'healthHistory'>) => {
+  const addPet = async (petData: AddPetData) => {
     if (!user) throw new Error("Usuário não autenticado.");
 
+    let avatarUrl = `https://picsum.photos/seed/${petData.name}/200/200`;
+    if (petData.avatarFile) {
+        const storageRef = ref(storage, `pets_avatars/${user.uid}/${Date.now()}_${petData.avatarFile.name}`);
+        await uploadBytes(storageRef, petData.avatarFile);
+        avatarUrl = await getDownloadURL(storageRef);
+    }
+
+    const { avatarFile, notes, ...restOfPetData } = petData;
+
     const newPetData = {
-      ...petData,
+      ...restOfPetData,
+      avatarUrl,
+      avatarHint: `${petData.species} ${petData.breed}`,
       tutorId: user.uid,
-      healthHistory: [],
+      healthHistory: notes ? [{
+        date: new Date().toISOString().split('T')[0],
+        type: 'Consulta' as const,
+        title: 'Notas Iniciais',
+        vet: 'Sistema',
+        details: `Notas: ${notes}`,
+      }] : [],
     };
     
     await addDoc(collection(db, "pets"), newPetData);
-    // O onSnapshot vai cuidar de atualizar a lista.
   };
 
-  const updatePet = async (id: string, updatedPetData: Partial<Omit<Pet, 'id' | 'tutorId'>>) => {
+  const updatePet = async (id: string, petData: UpdatePetData) => {
      if (!user) throw new Error("Usuário não autenticado.");
      const petRef = doc(db, 'pets', id);
-     await updateDoc(petRef, updatedPetData);
-     // O onSnapshot vai cuidar de atualizar a lista.
+     
+     let updatedData: Partial<Pet> = {};
+
+      if (petData.avatarFile) {
+        const storageRef = ref(storage, `pets_avatars/${user.uid}/${Date.now()}_${petData.avatarFile.name}`);
+        await uploadBytes(storageRef, petData.avatarFile);
+        updatedData.avatarUrl = await getDownloadURL(storageRef);
+    }
+
+    const { avatarFile, notes, ...restOfPetData } = petData;
+    updatedData = { ...updatedData, ...restOfPetData };
+
+     await updateDoc(petRef, updatedData);
   };
 
   const deletePet = async (id: string) => {
     if (!user) throw new Error("Usuário não autenticado.");
     const petRef = doc(db, 'pets', id);
     await deleteDoc(petRef);
-    // O onSnapshot vai cuidar de atualizar a lista.
   };
   
   const addHealthHistoryEntry = async (petId: string, entry: Omit<HealthHistoryItem, 'icon'|'date'>) => {
@@ -163,7 +202,6 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
      await updateDoc(petRef, {
          healthHistory: arrayUnion(newEntry)
      });
-     // O onSnapshot vai cuidar de atualizar a lista.
   };
 
   return (
