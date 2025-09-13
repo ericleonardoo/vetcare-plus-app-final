@@ -10,7 +10,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePets } from '@/context/PetsContext';
 import { useAppointments } from '@/context/AppointmentsContext';
@@ -20,7 +20,7 @@ import { useTutor } from '@/context/TutorContext';
 export default function DashboardPage() {
   const { pets } = usePets();
   const { appointments } = useAppointments();
-  const { tutor } = useTutor();
+  const { tutor, loading: isTutorLoading } = useTutor();
 
   const upcomingAppointments = useMemo(() => 
     appointments
@@ -29,6 +29,15 @@ export default function DashboardPage() {
       .slice(0, 5), // Limita a 5 agendamentos
     [appointments]
   );
+
+  if (isTutorLoading || !tutor) {
+     return (
+         <div className="flex flex-col items-center justify-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Carregando seu dashboard...</p>
+        </div>
+     )
+  }
 
   return (
     <div className="flex flex-col gap-8">

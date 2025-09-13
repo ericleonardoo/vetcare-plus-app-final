@@ -26,6 +26,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile } from '@/lib/actions';
 import { useTutor } from '@/context/TutorContext';
+import { useAuth } from '@/context/AuthContext';
 
 const profileFormSchema = z.object({
     name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -38,22 +39,34 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function ProfilePage() {
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
-    const { tutor, updateTutor } = useTutor();
+    const { user } = useAuth();
+    const { tutor, updateTutor, loading: isTutorLoading } = useTutor();
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: tutor,
+        defaultValues: {
+            name: '',
+            email: '',
+            phone: ''
+        },
     });
 
     useEffect(() => {
-        form.reset(tutor);
+        if (tutor) {
+            form.reset(tutor);
+        }
     }, [tutor, form]);
 
     const onSubmit = (data: ProfileFormValues) => {
+        if (!user) {
+            toast({ variant: 'destructive', title: "Erro", description: "Você precisa estar logado."});
+            return;
+        }
+
         startTransition(async () => {
-            const result = await updateUserProfile(data);
+            const result = await updateUserProfile(user.uid, data);
             if(result.success) {
-                updateTutor(data);
+                updateTutor(data); // Atualiza o contexto localmente para feedback instantâneo
                 toast({
                     title: "Sucesso!",
                     description: result.message,
@@ -67,6 +80,15 @@ export default function ProfilePage() {
             }
         });
     };
+
+    if (isTutorLoading) {
+       return (
+         <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Carregando seu perfil...</p>
+        </div>
+       )
+    }
 
   return (
     <div className="flex flex-col gap-8">
@@ -94,7 +116,7 @@ export default function ProfilePage() {
                         <FormItem>
                         <FormLabel>Nome Completo</FormLabel>
                         <FormControl>
-                            <Input {...field} />
+                            <Input {...field} disabled={isPending} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -107,7 +129,7 @@ export default function ProfilePage() {
                         <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                            <Input type="email" {...field} />
+                            <Input type="email" {...field} disabled={isPending} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -120,7 +142,7 @@ export default function ProfilePage() {
                         <FormItem>
                         <FormLabel>Telefone</FormLabel>
                         <FormControl>
-                            <Input type="tel" {...field} />
+                            <Input type="tel" {...field} disabled={isPending} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -133,17 +155,17 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <FormLabel htmlFor="current-password">Senha Atual</FormLabel>
-                            <Input id="current-password" type="password" />
+                            <Input id="current-password" type="password" disabled={true} />
                         </div>
                         <div className="grid gap-2">
                             <FormLabel htmlFor="new-password">Nova Senha</FormLabel>
-                            <Input id="new-password" type="password" />
+                            <Input id="new-password" type="password" disabled={true} />
                         </div>
                     </div>
                 </div>
                 <div className="flex justify-end pt-4">
-                    <Button type="submit" disabled={isPending}>
-                         {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Button type="submit" disabled={isPending || isTutorLoading}>
+                         {(isPending || isTutorLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Salvar Alterações
                     </Button>
                 </div>

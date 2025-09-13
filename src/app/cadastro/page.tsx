@@ -20,8 +20,9 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 
 const signupSchema = z.object({
@@ -56,7 +57,19 @@ export default function CadastroPage() {
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+
+      // Atualiza o perfil do Firebase Auth com o nome
+      await updateProfile(user, { displayName: data.name });
+
+      // Cria o documento do tutor no Firestore
+      await setDoc(doc(db, "tutors", user.uid), {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+      });
+
       toast({
         title: "Conta Criada com Sucesso!",
         description: "Você será redirecionado para o seu portal.",
