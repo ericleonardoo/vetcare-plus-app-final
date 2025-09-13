@@ -4,7 +4,7 @@ import { Stethoscope, Syringe, ClipboardList } from 'lucide-react';
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 
 export type HealthHistoryItem = {
   date: string;
@@ -34,8 +34,8 @@ type PetWithAge = Pet & { age: string; healthHistory: (HealthHistoryItem & {icon
 type PetsContextType = {
   pets: PetWithAge[];
   addPet: (pet: Omit<Pet, 'id' | 'tutorId' | 'healthHistory'>) => Promise<void>;
-  updatePet: (id: string, updatedPet: Partial<Pet>) => void;
-  deletePet: (id: string) => void;
+  updatePet: (id: string, updatedPet: Partial<Omit<Pet, 'id' | 'tutorId'>>) => Promise<void>;
+  deletePet: (id: string) => Promise<void>;
   addHealthHistoryEntry: (petId: string, entry: Omit<HealthHistoryItem, 'icon'|'date'>) => Promise<void>;
   loading: boolean;
 };
@@ -50,6 +50,7 @@ const iconMapping = {
 };
 
 const calculateAge = (birthDate: string): string => {
+    if (!birthDate) return 'Idade desconhecida';
     const birth = new Date(birthDate);
     const today = new Date();
     let ageYears = today.getFullYear() - birth.getFullYear();
@@ -86,7 +87,7 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             ...data, 
             id: doc.id,
             age: calculateAge(data.birthDate),
-            healthHistory: data.healthHistory.map(hh => ({...hh, icon: iconMapping[hh.type]}))
+            healthHistory: data.healthHistory ? data.healthHistory.map(hh => ({...hh, icon: iconMapping[hh.type]})) : []
         });
       });
       setPets(userPets);
@@ -98,8 +99,37 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user]);
 
   useEffect(() => {
-    fetchPets();
-  }, [fetchPets]);
+    // Para um ambiente multi-usuário real, você pode querer buscar todos os pets
+    // se o usuário for um profissional. Por enquanto, mantemos a lógica do tutor.
+    if (user?.email?.includes('vet')) {
+        fetchAllPets();
+    } else {
+        fetchPets();
+    }
+  }, [user, fetchPets]);
+
+   const fetchAllPets = useCallback(async () => {
+    setLoading(true);
+    try {
+      const petsCollection = collection(db, 'pets');
+      const querySnapshot = await getDocs(petsCollection);
+      const allPets: PetWithAge[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data() as Omit<Pet, 'id'>;
+        allPets.push({ 
+            ...data, 
+            id: doc.id,
+            age: calculateAge(data.birthDate),
+            healthHistory: data.healthHistory ? data.healthHistory.map(hh => ({...hh, icon: iconMapping[hh.type]})) : []
+        });
+      });
+      setPets(allPets);
+    } catch (error) {
+      console.error("Erro ao buscar todos os pets: ", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const addPet = async (petData: Omit<Pet, 'id' | 'tutorId'|'healthHistory'>) => {
     if (!user) throw new Error("Usuário não autenticado.");
@@ -112,7 +142,6 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     const docRef = await addDoc(collection(db, "pets"), newPetData);
     
-    // Atualiza o estado local para feedback imediato
     setPets((prevPets) => [
         ...prevPets, 
         { 
@@ -124,14 +153,21 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ]);
   };
 
-  const updatePet = (id: string, updatedPet: Partial<Pet>) => {
-    // Implementação pendente
-    console.log('Update pet (not implemented)', id, updatedPet);
+  const updatePet = async (id: string, updatedPetData: Partial<Omit<Pet, 'id' | 'tutorId'>>) => {
+     if (!user) throw new Error("Usuário não autenticado.");
+     const petRef = doc(db, 'pets', id);
+     await updateDoc(petRef, updatedPetData);
+
+     setPets(prevPets => prevPets.map(p => 
+        p.id === id ? { ...p, ...updatedPetData, age: calculateAge(updatedPetData.birthDate || p.birthDate) } : p
+     ));
   };
 
-  const deletePet = (id: string) => {
-    // Implementação pendente
-     console.log('Delete pet (not implemented)', id);
+  const deletePet = async (id: string) => {
+    if (!user) throw new Error("Usuário não autenticado.");
+    const petRef = doc(db, 'pets', id);
+    await deleteDoc(petRef);
+    setPets(prevPets => prevPets.filter(p => p.id !== id));
   };
   
   const addHealthHistoryEntry = async (petId: string, entry: Omit<HealthHistoryItem, 'icon'|'date'>) => {
@@ -147,7 +183,6 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
          healthHistory: arrayUnion(newEntry)
      });
 
-    // Atualiza o estado local para feedback imediato
      setPets(prevPets => prevPets.map(p => {
          if (p.id === petId) {
              return {

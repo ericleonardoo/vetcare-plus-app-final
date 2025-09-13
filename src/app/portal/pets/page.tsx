@@ -8,19 +8,58 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlusCircle, MoreVertical, Loader2 } from 'lucide-react';
+import { PlusCircle, MoreVertical, Loader2, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { usePets } from '@/context/PetsContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { Pet } from '@/context/PetsContext';
 
 
 export default function PetsPage() {
-    const { pets, loading } = usePets();
+    const { pets, deletePet, loading } = usePets();
+    const [petToDelete, setPetToDelete] = useState<Pet | null>(null);
+    const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+    const { toast } = useToast();
+
+    const handleDelete = async () => {
+      if (!petToDelete) return;
+
+      setIsDeleteLoading(true);
+      try {
+        await deletePet(petToDelete.id);
+        toast({
+          title: "Pet Removido",
+          description: `${petToDelete.name} foi removido com sucesso.`
+        });
+      } catch (error) {
+         toast({
+          variant: "destructive",
+          title: "Erro ao remover pet",
+          description: "Não foi possível remover o pet. Tente novamente."
+        });
+      } finally {
+        setIsDeleteLoading(false);
+        setPetToDelete(null);
+      }
+    }
 
     if (loading) {
         return (
@@ -32,6 +71,7 @@ export default function PetsPage() {
     }
 
   return (
+    <>
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <div>
@@ -72,7 +112,9 @@ export default function PetsPage() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem asChild><Link href={`/portal/pets/${pet.id}/editar`}>Editar</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href={`/portal/pets/${pet.id}`}>Ver Histórico</Link></DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => setPetToDelete(pet)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Remover
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -97,5 +139,23 @@ export default function PetsPage() {
         </Link>
       </div>
     </div>
+    <AlertDialog open={!!petToDelete} onOpenChange={(isOpen) => !isOpen && setPetToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso irá remover permanentemente o pet <span className='font-bold'>{petToDelete?.name}</span> e todo o seu histórico.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleteLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90" disabled={isDeleteLoading}>
+              {isDeleteLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sim, remover pet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
