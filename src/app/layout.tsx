@@ -8,6 +8,7 @@ import { AuthProvider } from '@/context/AuthContext';
 export const metadata: Metadata = {
   title: 'VetCare+',
   description: 'Cuidado Excepcional para o Seu Melhor Amigo',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
