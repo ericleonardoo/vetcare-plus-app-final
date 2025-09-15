@@ -23,6 +23,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 
 const signupSchema = z.object({
@@ -30,7 +32,8 @@ const signupSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
   phone: z.string().min(10, { message: "O telefone é obrigatório." }),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
-  confirmPassword: z.string()
+  confirmPassword: z.string(),
+  isProfessional: z.boolean().default(false),
 }).refine(data => data.password === data.confirmPassword, {
   message: "As senhas não coincidem.",
   path: ["confirmPassword"],
@@ -51,13 +54,18 @@ export default function CadastroPage() {
       phone: '',
       password: '',
       confirmPassword: '',
+      isProfessional: false,
     },
   });
 
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
+    
+    // Hack temporário para diferenciar profissionais
+    const finalEmail = data.isProfessional ? data.email.replace('@', '+vet@') : data.email;
+
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, finalEmail, data.password);
       const user = userCredential.user;
 
       // Atualiza o perfil do Firebase Auth com o nome
@@ -66,8 +74,9 @@ export default function CadastroPage() {
       // Cria o documento do tutor no Firestore
       await setDoc(doc(db, "tutors", user.uid), {
         name: data.name,
-        email: data.email,
+        email: finalEmail, // Salva o email final (com +vet se for o caso)
         phone: data.phone,
+        isProfessional: data.isProfessional, // Salva a role
       });
 
       toast({
@@ -89,6 +98,9 @@ export default function CadastroPage() {
           case 'auth/weak-password':
             errorMessage = "A senha é muito fraca. Use pelo menos 6 caracteres.";
             break;
+          case 'permission-denied':
+             errorMessage = "Permissão negada para criar o perfil. Verifique as regras de segurança do Firestore.";
+             break;
           default:
             errorMessage = `Ocorreu um erro inesperado. Código: ${error.code}`;
             break;
@@ -185,6 +197,25 @@ export default function CadastroPage() {
                       </FormControl>
                       <FormMessage />
                     </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isProfessional"
+                  render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                              <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  disabled={isLoading}
+                                  id="isProfessional"
+                              />
+                          </FormControl>
+                          <Label htmlFor="isProfessional" className="cursor-pointer text-sm font-normal">
+                              Cadastrar como profissional (para teste)
+                          </Label>
+                      </FormItem>
                   )}
                 />
                 <Button type="submit" className="w-full" disabled={isLoading}>
