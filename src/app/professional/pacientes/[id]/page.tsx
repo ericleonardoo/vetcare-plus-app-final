@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { 
-    ArrowLeft, Cake, Bone, Cat, Dog, Heart, Stethoscope, Sparkles, BrainCircuit, Loader2, PlusCircle, Pencil, FilePlus, User
+    ArrowLeft, Cake, Bone, Cat, Dog, Heart, Stethoscope, Sparkles, BrainCircuit, Loader2, PlusCircle, Pencil, FilePlus, User, Syringe, ShieldAlert
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +34,13 @@ import { Input } from '@/components/ui/input';
 import { useTutors } from '@/context/TutorsContext';
 import { useInvoices } from '@/context/InvoicesContext';
 import { Trash2 } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
 const newHistoryEntrySchema = z.object({
@@ -53,21 +60,30 @@ const newInvoiceSchema = z.object({
 });
 type NewInvoiceValues = z.infer<typeof newInvoiceSchema>;
 
+const newVaccineSchema = z.object({
+  vaccineName: z.string().min(3, "O nome da vacina é obrigatório."),
+  applicationDate: z.date({ required_error: "A data de aplicação é obrigatória." }),
+  nextDueDate: z.date().nullable(),
+});
+type NewVaccineValues = z.infer<typeof newVaccineSchema>;
+
 
 export default function ProfessionalPetRecordPage({ params }: { params: { id: string } }) {
   const [isAIPending, startAITransition] = useTransition();
   const [isHistoryPending, startHistoryTransition] = useTransition();
   const [isInvoicePending, startInvoiceTransition] = useTransition();
+  const [isVaccinePending, startVaccineTransition] = useTransition();
 
   const { toast } = useToast();
   const [carePlan, setCarePlan] = useState<GenerateCarePlanOutput | null>(null);
   const router = useRouter();
-  const { pets, addHealthHistoryEntry, loading: petsLoading } = usePets();
+  const { pets, addHealthHistoryEntry, addVaccineHistoryEntry, loading: petsLoading } = usePets();
   const { tutors, loading: tutorsLoading } = useTutors();
   const { addInvoice } = useInvoices();
 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [isVaccineModalOpen, setIsVaccineModalOpen] = useState(false);
 
   const pet = pets.find((p) => p.id === params.id);
   const tutor = useMemo(() => {
@@ -96,6 +112,14 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
   const totalAmount = useMemo(() => {
     return watchedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
   }, [watchedItems]);
+
+  const vaccineForm = useForm<NewVaccineValues>({
+    resolver: zodResolver(newVaccineSchema),
+    defaultValues: {
+      applicationDate: new Date(),
+      nextDueDate: null,
+    }
+  });
 
 
   const handleGenerateCarePlan = () => {
@@ -131,13 +155,31 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
         await addHealthHistoryEntry(pet.id, data);
         toast({
           title: "Registro Adicionado!",
-          description: `Novo item de histórico de saúde adicionado para ${pet.name}.`
+          description: `Novo item de prontuário adicionado para ${pet.name}.`
         });
         historyForm.reset({vet: 'Dra. Emily Carter'});
         setIsHistoryModalOpen(false);
       } catch (error) {
         console.error("Erro ao adicionar histórico: ", error);
         toast({ variant: 'destructive', title: "Erro", description: "Não foi possível adicionar o registro."});
+      }
+    });
+  }
+
+  const handleAddVaccineEntry = (data: NewVaccineValues) => {
+    if (!pet) return;
+    startVaccineTransition(async () => {
+      try {
+        await addVaccineHistoryEntry(pet.id, data);
+        toast({
+          title: "Vacina Registrada!",
+          description: `A vacina ${data.vaccineName} foi registrada para ${pet.name}.`
+        });
+        vaccineForm.reset({ applicationDate: new Date(), nextDueDate: null, vaccineName: '' });
+        setIsVaccineModalOpen(false);
+      } catch (error) {
+        console.error("Erro ao adicionar vacina: ", error);
+        toast({ variant: 'destructive', title: "Erro", description: "Não foi possível registrar a vacina."});
       }
     });
   }
@@ -252,8 +294,8 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
-                            <CardTitle className="font-headline">Histórico de Saúde / Prontuário</CardTitle>
-                            <CardDescription>Visualize e adicione registros ao histórico do paciente.</CardDescription>
+                            <CardTitle className="font-headline">Prontuário</CardTitle>
+                            <CardDescription>Adicione registros ao histórico do paciente.</CardDescription>
                         </div>
                         <div className='flex gap-2'>
                           <Dialog open={isInvoiceModalOpen} onOpenChange={setIsInvoiceModalOpen}>
@@ -346,7 +388,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                                         <FormField control={historyForm.control} name="title" render={({ field }) => (
                                             <FormItem>
                                             <FormLabel>Título / Procedimento</FormLabel>
-                                            <FormControl><Input placeholder="Ex: Vacina Antirrábica" {...field} disabled={isHistoryPending}/></FormControl>
+                                            <FormControl><Input placeholder="Ex: Check-up Anual" {...field} disabled={isHistoryPending}/></FormControl>
                                             <FormMessage />
                                             </FormItem>
                                         )} />
@@ -402,11 +444,117 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                           </ul>
                         ) : (
                            <div className="text-center text-muted-foreground p-4 border-2 border-dashed rounded-lg">
-                              <p>Nenhum histórico encontrado para {pet.name}.</p>
+                              <p>Nenhum prontuário encontrado para {pet.name}.</p>
                             </div>
                         )}
                     </CardContent>
                 </Card>
+
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                         <div>
+                            <CardTitle className="font-headline">Histórico de Vacinas</CardTitle>
+                            <CardDescription>Gerencie as vacinas e lembretes para {pet.name}.</CardDescription>
+                        </div>
+                         <Dialog open={isVaccineModalOpen} onOpenChange={setIsVaccineModalOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="sm">
+                                    <ShieldAlert className="mr-2 h-4 w-4" />
+                                    Registrar Vacina
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[480px]">
+                                <DialogHeader>
+                                    <DialogTitle>Registrar Nova Vacina</DialogTitle>
+                                    <DialogDescription>
+                                        Preencha os dados da vacina aplicada em {pet.name}. Isso alimentará os lembretes automáticos.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <Form {...vaccineForm}>
+                                    <form onSubmit={vaccineForm.handleSubmit(handleAddVaccineEntry)} className="space-y-4 py-4">
+                                        <FormField control={vaccineForm.control} name="vaccineName" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Nome da Vacina</FormLabel>
+                                                <FormControl><Input placeholder="Ex: V10, Antirrábica" {...field} disabled={isVaccinePending} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <div className='grid grid-cols-2 gap-4'>
+                                            <FormField control={vaccineForm.control} name="applicationDate" render={({ field }) => (
+                                                <FormItem className="flex flex-col">
+                                                    <FormLabel>Data da Aplicação</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild><FormControl>
+                                                            <Button variant={'outline'} className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')} disabled={isVaccinePending}>
+                                                                {field.value ? format(field.value, 'PPP', { locale: ptBR }) : <span>Escolha uma data</span>}
+                                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                            </Button>
+                                                        </FormControl></PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                            <FormField control={vaccineForm.control} name="nextDueDate" render={({ field }) => (
+                                                <FormItem className="flex flex-col">
+                                                    <FormLabel>Próxima Dose</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild><FormControl>
+                                                            <Button variant={'outline'} className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')} disabled={isVaccinePending}>
+                                                                {field.value ? format(field.value, 'PPP', { locale: ptBR }) : <span>(Opcional)</span>}
+                                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                            </Button>
+                                                        </FormControl></PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date()} initialFocus />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                        </div>
+                                         <DialogFooter>
+                                            <DialogClose asChild><Button type="button" variant="outline" disabled={isVaccinePending}>Cancelar</Button></DialogClose>
+                                            <Button type="submit" disabled={isVaccinePending}>
+                                                {isVaccinePending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Salvar Vacina
+                                            </Button>
+                                        </DialogFooter>
+                                    </form>
+                                </Form>
+                            </DialogContent>
+                         </Dialog>
+                    </CardHeader>
+                    <CardContent>
+                       {pet.vaccineHistory && pet.vaccineHistory.length > 0 ? (
+                           <Table>
+                               <TableHeader>
+                                   <TableRow>
+                                       <TableHead>Vacina</TableHead>
+                                       <TableHead>Data Aplicada</TableHead>
+                                       <TableHead>Próxima Dose</TableHead>
+                                   </TableRow>
+                               </TableHeader>
+                               <TableBody>
+                                   {pet.vaccineHistory.sort((a,b) => b.applicationDate.toMillis() - a.applicationDate.toMillis()).map((v, i) => (
+                                       <TableRow key={i}>
+                                           <TableCell className="font-medium">{v.vaccineName}</TableCell>
+                                           <TableCell>{format(v.applicationDate.toDate(), 'PPP', { locale: ptBR })}</TableCell>
+                                           <TableCell>{v.nextDueDate ? format(v.nextDueDate.toDate(), 'PPP', { locale: ptBR }) : 'N/A'}</TableCell>
+                                       </TableRow>
+                                   ))}
+                               </TableBody>
+                           </Table>
+                       ) : (
+                           <div className="text-center text-muted-foreground p-4 border-2 border-dashed rounded-lg">
+                              <p>Nenhum registro de vacina encontrado para {pet.name}.</p>
+                           </div>
+                       )}
+                    </CardContent>
+                </Card>
+
                  <Card>
                     <CardHeader>
                         <CardTitle className="font-headline">Plano de Cuidados Personalizado (IA)</CardTitle>
@@ -449,6 +597,5 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
     </div>
   );
 }
-
 
     

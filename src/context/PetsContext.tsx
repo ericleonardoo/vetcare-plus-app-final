@@ -1,11 +1,11 @@
 
 'use client';
 
-import { Stethoscope, Syringe, ClipboardList } from 'lucide-react';
+import { Stethoscope, Syringe, ClipboardList, ShieldAlert } from 'lucide-react';
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { db, storage } from '@/lib/firebase';
-import { collection, query, where, doc, updateDoc, arrayUnion, deleteDoc, onSnapshot, Unsubscribe, addDoc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, arrayUnion, deleteDoc, onSnapshot, Unsubscribe, addDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export type HealthHistoryItem = {
@@ -15,6 +15,12 @@ export type HealthHistoryItem = {
   vet: string;
   details: string;
 };
+
+export type VaccineHistoryItem = {
+    vaccineName: string;
+    applicationDate: Timestamp;
+    nextDueDate: Timestamp | null;
+}
 
 export type Pet = {
   id: string; // Firestore document ID
@@ -27,6 +33,8 @@ export type Pet = {
   avatarUrl: string;
   avatarHint: string;
   healthHistory: (Omit<HealthHistoryItem, 'icon'>)[];
+  vaccineHistory: VaccineHistoryItem[];
+  lastCheckupDate: Timestamp | null;
 };
 
 type PetWithAge = Pet & { age: string; healthHistory: (HealthHistoryItem & {icon: React.ElementType})[] };
@@ -50,6 +58,7 @@ type PetsContextType = {
   updatePet: (id: string, updatedPet: UpdatePetData) => Promise<void>;
   deletePet: (id: string) => Promise<void>;
   addHealthHistoryEntry: (petId: string, entry: Omit<HealthHistoryItem, 'icon'|'date'>) => Promise<void>;
+  addVaccineHistoryEntry: (petId: string, entry: Omit<VaccineHistoryItem, 'applicationDate'> & { applicationDate: Date, nextDueDate: Date | null }) => Promise<void>;
   loading: boolean;
 };
 
@@ -57,7 +66,7 @@ const iconMapping = {
     'Consulta': Stethoscope,
     'Emergência': Stethoscope,
     'Exame': ClipboardList,
-    'Vacina': Syringe,
+    'Vacina': ShieldAlert, // Changed to a more distinct icon
 };
 
 const calculateAge = (birthDate: string): string => {
@@ -114,7 +123,9 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               ...data, 
               id: doc.id,
               age: calculateAge(data.birthDate),
-              healthHistory: data.healthHistory ? data.healthHistory.map(hh => ({...hh, icon: iconMapping[hh.type]})) : []
+              healthHistory: data.healthHistory ? data.healthHistory.map(hh => ({...hh, icon: iconMapping[hh.type]})) : [],
+              vaccineHistory: data.vaccineHistory || [],
+              lastCheckupDate: data.lastCheckupDate || null
           });
         });
         setPets(userPets);
@@ -161,6 +172,8 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         vet: 'Sistema',
         details: `Notas: ${notes}`,
       }] : [],
+      vaccineHistory: [],
+      lastCheckupDate: null,
     };
     
     await addDoc(collection(db, "pets"), newPetData);
@@ -199,13 +212,34 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
      }
 
      const petRef = doc(db, 'pets', petId);
+     const updatePayload: { healthHistory: any, lastCheckupDate?: Timestamp } = {
+        healthHistory: arrayUnion(newEntry)
+     };
+
+     if (entry.type === 'Consulta' && entry.title.toLowerCase().includes('check-up')) {
+        updatePayload.lastCheckupDate = Timestamp.now();
+     }
+     
+     await updateDoc(petRef, updatePayload);
+  };
+
+  const addVaccineHistoryEntry = async (petId: string, entry: Omit<VaccineHistoryItem, 'applicationDate'> & { applicationDate: Date, nextDueDate: Date | null }) => {
+     if (!user) throw new Error("Usuário não autenticado.");
+     
+     const newVaccineEntry = {
+        vaccineName: entry.vaccineName,
+        applicationDate: Timestamp.fromDate(entry.applicationDate),
+        nextDueDate: entry.nextDueDate ? Timestamp.fromDate(entry.nextDueDate) : null
+     }
+
+     const petRef = doc(db, 'pets', petId);
      await updateDoc(petRef, {
-         healthHistory: arrayUnion(newEntry)
+         vaccineHistory: arrayUnion(newVaccineEntry)
      });
   };
 
   return (
-    <PetsContext.Provider value={{ pets, addPet, updatePet, deletePet, addHealthHistoryEntry, loading }}>
+    <PetsContext.Provider value={{ pets, addPet, updatePet, deletePet, addHealthHistoryEntry, addVaccineHistoryEntry, loading }}>
       {children}
     </PetsContext.Provider>
   );
@@ -218,3 +252,5 @@ export const usePets = () => {
   }
   return context;
 };
+
+    
