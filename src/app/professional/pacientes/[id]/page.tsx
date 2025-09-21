@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { 
-    ArrowLeft, Cake, Bone, Cat, Dog, Heart, Stethoscope, Sparkles, BrainCircuit, Loader2, PlusCircle, Pencil, FilePlus
+    ArrowLeft, Cake, Bone, Cat, Dog, Heart, Stethoscope, Sparkles, BrainCircuit, Loader2, PlusCircle, Pencil, FilePlus, User
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { useTutors } from '@/context/TutorsContext';
 import { useInvoices } from '@/context/InvoicesContext';
+import { Trash2 } from 'lucide-react';
 
 
 const newHistoryEntrySchema = z.object({
@@ -158,7 +159,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                   title: `Fatura Gerada como ${status}!`,
                   description: `A fatura para ${pet.name} foi salva com sucesso.`
               });
-              invoiceForm.reset();
+              invoiceForm.reset({ items: [{ description: '', quantity: 1, unitPrice: 0 }] });
               setIsInvoiceModalOpen(false);
           } catch(error) {
               console.error("Erro ao gerar fatura:", error);
@@ -241,7 +242,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                             <span>Gênero: <span className="font-medium">{pet.gender}</span></span>
                         </div>
                         <div className="border-t pt-4 flex items-center gap-3">
-                           <Stethoscope className="h-5 w-5 text-muted-foreground" />
+                           <User className="h-5 w-5 text-muted-foreground" />
                            <span>Tutor(a): <span className="font-medium">{tutor?.name || 'Carregando...'}</span></span>
                         </div>
                     </CardContent>
@@ -284,7 +285,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                                                           <Input type="number" placeholder="Preço Un." {...field} />
                                                       )} />
                                                       <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                                                          <Pencil className="h-4 w-4" />
+                                                          <Trash2 className="h-4 w-4 text-destructive" />
                                                       </Button>
                                                   </div>
                                               ))}
@@ -448,3 +449,6 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
     </div>
   );
 }
+
+
+    

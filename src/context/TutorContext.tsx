@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
@@ -7,6 +8,7 @@ import { db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 
 export type Tutor = {
+  id: string;
   name: string;
   email: string;
   phone: string;
@@ -14,7 +16,7 @@ export type Tutor = {
 
 type TutorContextType = {
   tutor: Tutor | null;
-  updateTutor: (tutorData: Partial<Tutor>) => void;
+  updateTutor: (tutorData: Partial<Omit<Tutor, 'id'>>) => void;
   loading: boolean;
 };
 
@@ -35,10 +37,9 @@ export const TutorProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const docRef = doc(db, 'tutors', user.uid);
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
-        setTutor(docSnap.data() as Tutor);
+        setTutor({ id: docSnap.id, ...docSnap.data() } as Tutor);
       } else {
         // This case should be rare now since registration creates the doc
-        console.warn(`Tutor document not found for user ${user.uid}`);
       }
       setLoading(false);
     }, (error) => {
@@ -69,5 +70,6 @@ export const useTutor = () => {
   }
   return context;
 };
+
 
     
