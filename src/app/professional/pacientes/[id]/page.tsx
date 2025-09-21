@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,7 +8,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useTransition, useMemo } from 'react';
+import { useState, useTransition, useMemo, useEffect } from 'react';
 import { generateCarePlan } from '@/lib/actions';
 import type { GenerateCarePlanOutput } from '@/ai/flows/generate-care-plan';
 import { usePets } from '@/context/PetsContext';
@@ -67,23 +66,35 @@ const newVaccineSchema = z.object({
 });
 type NewVaccineValues = z.infer<typeof newVaccineSchema>;
 
+const editPetSchema = z.object({
+  name: z.string().min(2, { message: "O nome é obrigatório." }),
+  species: z.string({ required_error: "Selecione a espécie." }),
+  breed: z.string().min(2, { message: "A raça é obrigatória." }),
+  birthDate: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Data inválida." }),
+  gender: z.string({ required_error: "Selecione o gênero." }),
+});
+type EditPetValues = z.infer<typeof editPetSchema>;
+
 
 export default function ProfessionalPetRecordPage({ params }: { params: { id: string } }) {
   const [isAIPending, startAITransition] = useTransition();
   const [isHistoryPending, startHistoryTransition] = useTransition();
   const [isInvoicePending, startInvoiceTransition] = useTransition();
   const [isVaccinePending, startVaccineTransition] = useTransition();
+  const [isEditPetPending, startEditPetTransition] = useTransition();
 
   const { toast } = useToast();
   const [carePlan, setCarePlan] = useState<GenerateCarePlanOutput | null>(null);
   const router = useRouter();
-  const { pets, addHealthHistoryEntry, addVaccineHistoryEntry, loading: petsLoading } = usePets();
+  const { pets, addHealthHistoryEntry, addVaccineHistoryEntry, updatePet, loading: petsLoading } = usePets();
   const { tutors, loading: tutorsLoading } = useTutors();
   const { addInvoice } = useInvoices();
 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isVaccineModalOpen, setIsVaccineModalOpen] = useState(false);
+  const [isEditPetModalOpen, setIsEditPetModalOpen] = useState(false);
+
 
   const pet = pets.find((p) => p.id === params.id);
   const tutor = useMemo(() => {
@@ -120,6 +131,22 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
       nextDueDate: null,
     }
   });
+  
+  const editPetForm = useForm<EditPetValues>({
+    resolver: zodResolver(editPetSchema),
+  });
+
+  useEffect(() => {
+    if (pet && isEditPetModalOpen) {
+      editPetForm.reset({
+        name: pet.name,
+        species: pet.species,
+        breed: pet.breed,
+        birthDate: pet.birthDate,
+        gender: pet.gender,
+      });
+    }
+  }, [pet, isEditPetModalOpen, editPetForm]);
 
 
   const handleGenerateCarePlan = () => {
@@ -209,6 +236,23 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
           }
       });
   }
+  
+  const handleEditPet = (data: EditPetValues) => {
+    if (!pet) return;
+    startEditPetTransition(async () => {
+      try {
+        await updatePet(pet.id, data);
+        toast({
+          title: "Paciente Atualizado!",
+          description: `Os dados de ${data.name} foram atualizados.`
+        });
+        setIsEditPetModalOpen(false);
+      } catch (error) {
+        console.error("Erro ao editar pet:", error);
+        toast({ variant: 'destructive', title: "Erro", description: "Não foi possível atualizar os dados do paciente." });
+      }
+    });
+  };
 
   if (petsLoading || tutorsLoading) {
     return (
@@ -256,10 +300,63 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                         </Avatar>
                         <h1 className="text-3xl font-bold font-headline">{pet.name}</h1>
                         <p className="text-muted-foreground">{pet.breed}</p>
-                         <Button variant="outline" size="sm" className="mt-4 w-full">
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar Perfil do Paciente
-                        </Button>
+                        <Dialog open={isEditPetModalOpen} onOpenChange={setIsEditPetModalOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="mt-4 w-full">
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar Perfil do Paciente
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Editar Paciente: {pet.name}</DialogTitle>
+                              <DialogDescription>
+                                Atualize os dados cadastrais do paciente.
+                              </DialogDescription>
+                            </DialogHeader>
+                             <Form {...editPetForm}>
+                                <form onSubmit={editPetForm.handleSubmit(handleEditPet)} className="space-y-4 py-4">
+                                  <FormField control={editPetForm.control} name="name" render={({ field }) => (
+                                      <FormItem><FormLabel>Nome</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                  )} />
+                                  <div className="grid grid-cols-2 gap-4">
+                                      <FormField control={editPetForm.control} name="species" render={({ field }) => (
+                                          <FormItem><FormLabel>Espécie</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                              <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                              <SelectContent><SelectItem value="Cachorro">Cachorro</SelectItem><SelectItem value="Gato">Gato</SelectItem><SelectItem value="Outro">Outro</SelectItem></SelectContent>
+                                            </Select>
+                                          <FormMessage /></FormItem>
+                                      )} />
+                                      <FormField control={editPetForm.control} name="gender" render={({ field }) => (
+                                          <FormItem><FormLabel>Gênero</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                              <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                              <SelectContent><SelectItem value="Macho">Macho</SelectItem><SelectItem value="Fêmea">Fêmea</SelectItem></SelectContent>
+                                            </Select>
+                                          <FormMessage /></FormItem>
+                                      )} />
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <FormField control={editPetForm.control} name="breed" render={({ field }) => (
+                                        <FormItem><FormLabel>Raça</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={editPetForm.control} name="birthDate" render={({ field }) => (
+                                      <FormItem><FormLabel>Nascimento</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                  </div>
+                                  <DialogFooter>
+                                      <DialogClose asChild><Button type="button" variant="outline" disabled={isEditPetPending}>Cancelar</Button></DialogClose>
+                                      <Button type="submit" disabled={isEditPetPending}>
+                                          {isEditPetPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                          Salvar Alterações
+                                      </Button>
+                                  </DialogFooter>
+                                </form>
+                            </Form>
+                          </DialogContent>
+                        </Dialog>
+
                     </CardContent>
                 </Card>
                  <Card>
