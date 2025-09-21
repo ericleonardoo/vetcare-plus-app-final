@@ -1,0 +1,58 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // TUTORES (CLIENTS)
+    match /tutors/{userId} {
+      // Qualquer usuário autenticado pode criar seu próprio perfil (documento de tutor)
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // Um usuário só pode ler, atualizar ou deletar seu próprio perfil
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      
+      // Profissionais ('vet') podem ler qualquer perfil de tutor
+      allow read: if request.auth != null && request.auth.token.email.matches('.*\\+vet@.*');
+    }
+    
+    // PETS
+    match /pets/{petId} {
+      // Um usuário autenticado pode criar um pet se o tutorId do pet for o seu próprio UID
+      allow create: if request.auth != null && request.resource.data.tutorId == request.auth.uid;
+      
+      // Um usuário pode ler, atualizar ou deletar um pet se ele for o dono (tutorId)
+      allow read, update, delete: if request.auth != null && resource.data.tutorId == request.auth.uid;
+      
+      // Profissionais ('vet') podem ler ou atualizar qualquer pet (para adicionar histórico, etc.)
+      allow read, update: if request.auth != null && request.auth.token.email.matches('.*\\+vet@.*');
+    }
+    
+    // AGENDAMENTOS
+    match /appointments/{appointmentId} {
+      // Um usuário autenticado pode criar um agendamento se o tutorId for o seu
+      allow create: if request.auth != null && request.resource.data.tutorId == request.auth.uid;
+      
+      // Um usuário pode ler seus próprios agendamentos
+      allow read: if request.auth != null && resource.data.tutorId == request.auth.uid;
+      
+      // Um usuário pode atualizar/deletar seu agendamento (para cancelar, por exemplo)
+      allow update, delete: if request.auth != null && resource.data.tutorId == request.auth.uid;
+      
+      // Profissionais ('vet') podem criar, ler, atualizar e deletar qualquer agendamento
+      allow create, read, update, delete: if request.auth != null && request.auth.token.email.matches('.*\\+vet@.*');
+    }
+
+    // FATURAS (INVOICES)
+    match /invoices/{invoiceId} {
+      // Profissionais podem criar faturas
+      allow create: if request.auth != null && request.auth.token.email.matches('.*\\+vet@.*');
+      
+      // Clientes podem ler apenas suas próprias faturas
+      allow read: if request.auth != null && resource.data.clientId == request.auth.uid;
+
+      // Profissionais podem ler e atualizar (marcar como paga) qualquer fatura
+      allow read, update: if request.auth != null && request.auth.token.email.matches('.*\\+vet@.*');
+    }
+    
+  }
+}

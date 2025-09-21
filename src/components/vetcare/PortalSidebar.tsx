@@ -38,7 +38,7 @@ export default function PortalSidebar() {
     { href: "/portal/agendamentos", icon: Calendar, label: "Agendamentos", badge: upcomingAppointmentsCount > 0 ? upcomingAppointmentsCount : undefined },
     { href: "/portal/pets", icon: Heart, label: "Meus Pets" },
     { href: "/portal/historico", icon: ClipboardList, label: "Histórico de Saúde" },
-    { href: "/portal/financeiro", icon: Wallet, label: "Financeiro" },
+    { href: "/portal/financeiro", icon: Wallet, label: "Minhas Faturas" },
   ]
 
   if (!user) {

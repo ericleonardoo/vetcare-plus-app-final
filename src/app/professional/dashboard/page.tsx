@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAppointments } from "@/context/AppointmentsContext";
@@ -22,13 +23,14 @@ import { usePets } from "@/context/PetsContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Clock, PawPrint, PhoneForwarded, Loader2, Users } from "lucide-react";
+import { ArrowUpRight, Clock, PawPrint, PhoneForwarded, Loader2, Users, DollarSign, FileWarning } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/context/NotificationsContext";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { useTutor } from "@/context/TutorContext";
-import { startOfWeek, eachDayOfInterval, format, parseISO } from 'date-fns';
+import { startOfWeek, eachDayOfInterval, format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useInvoices } from "@/context/InvoicesContext";
 
 
 export default function ProfessionalDashboard() {
@@ -36,6 +38,7 @@ export default function ProfessionalDashboard() {
   const { pets, loading: petsLoading } = usePets();
   const { notifications, clearNotifications } = useNotifications();
   const { tutor, loading: tutorLoading } = useTutor();
+  const { invoices, loading: invoicesLoading } = useInvoices();
 
 
   const today = new Date();
@@ -61,9 +64,20 @@ export default function ProfessionalDashboard() {
 
     const totalPets = pets.length;
     const totalTutors = new Set(pets.map(p => p.tutorId)).size;
+    
+    const firstDayOfMonth = startOfMonth(today);
+    const lastDayOfMonth = endOfMonth(today);
 
-    return { totalToday, totalPets, totalTutors };
-  }, [appointments, pets, today]);
+    const monthlyRevenue = invoices
+      .filter(inv => inv.status === 'Pago' && inv.paidAt && inv.paidAt.toDate() >= firstDayOfMonth && inv.paidAt.toDate() <= lastDayOfMonth)
+      .reduce((sum, inv) => sum + inv.totalAmount, 0);
+
+    const accountsReceivable = invoices
+      .filter(inv => inv.status === 'Pendente' || inv.status === 'Atrasado')
+      .reduce((sum, inv) => sum + inv.totalAmount, 0);
+
+    return { totalToday, totalPets, totalTutors, monthlyRevenue, accountsReceivable };
+  }, [appointments, pets, invoices, today]);
 
   const chartData = useMemo(() => {
     const start = startOfWeek(today, { weekStartsOn: 1 }); // Começa na segunda
@@ -91,7 +105,7 @@ export default function ProfessionalDashboard() {
   }, [appointments, today]);
 
 
-  const isLoading = appointmentsLoading || petsLoading || tutorLoading;
+  const isLoading = appointmentsLoading || petsLoading || tutorLoading || invoicesLoading;
 
 
   return (
@@ -124,7 +138,7 @@ export default function ProfessionalDashboard() {
             <PawPrint className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {petsLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.totalPets}</div>}
+            {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.totalPets}</div>}
             <p className="text-xs text-muted-foreground">
               pacientes cadastrados na clínica
             </p>
@@ -132,25 +146,25 @@ export default function ProfessionalDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Faturamento do Mês</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {petsLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.totalTutors}</div>}
+            {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyRevenue)}</div>}
             <p className="text-xs text-muted-foreground">
-              tutores ativos na plataforma
+              total de faturas pagas no mês
             </p>
           </CardContent>
         </Card>
          <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Faturamento (Mês)</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Contas a Receber</CardTitle>
+            <FileWarning className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 12,234.56</div>
+            {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.accountsReceivable)}</div>}
             <p className="text-xs text-muted-foreground">
-              +18.1% em relação ao mês passado
+              soma de faturas pendentes
             </p>
           </CardContent>
         </Card>

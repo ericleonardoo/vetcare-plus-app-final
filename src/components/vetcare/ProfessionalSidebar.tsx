@@ -10,7 +10,8 @@ import {
   LogOut,
   PawPrint,
   Settings,
-  Search
+  Search,
+  Wallet
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
@@ -26,6 +27,7 @@ const navLinks = [
     { href: "/professional/dashboard", icon: Home, label: "Dashboard" },
     { href: "/professional/agenda", icon: Calendar, label: "Agenda" },
     { href: "/professional/pacientes", icon: Users, label: "Pacientes" },
+    { href: "/professional/financeiro", icon: Wallet, label: "Financeiro" },
 ]
 
 export default function ProfessionalSidebar() {

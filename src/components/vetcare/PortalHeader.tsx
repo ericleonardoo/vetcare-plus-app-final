@@ -63,7 +63,7 @@ export default function PortalHeader() {
       icon: ClipboardList,
       label: 'Histórico de Saúde',
     },
-    { href: '/portal/financeiro', icon: Wallet, label: 'Financeiro' },
+    { href: '/portal/financeiro', icon: Wallet, label: 'Minhas Faturas' },
   ];
 
   return (
