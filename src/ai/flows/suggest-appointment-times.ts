@@ -10,13 +10,17 @@
  */
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { addDays } from 'date-fns';
+
 
 const SuggestAppointmentTimesInputSchema = z.object({
   serviceType: z.string().describe('The type of service requested (e.g., vaccination, checkup).'),
-  staffAvailability: z.string().describe('A JSON string representing the staff availability schedule. It can also contain a `blocked` array with specific ISO 8601 date-time strings that are unavailable, and a `dateRange` object with `start` and `end` ISO 8601 date-time strings to constrain the search.'),
   timeZone: z.string().describe('The time zone of the user (e.g., America/Los_Angeles).'),
   durationMinutes: z.number().describe('The duration of the appointment in minutes.'),
   numberOfSuggestions: z.number().describe('The number of appointment time suggestions to provide.'),
+  date: z.string().describe("A data selecionada pelo usuário no formato ISO 8601 para filtrar as sugestões."),
 });
 export type SuggestAppointmentTimesInput = z.infer<typeof SuggestAppointmentTimesInputSchema>;
 
@@ -33,7 +37,13 @@ export async function suggestAppointmentTimes(input: SuggestAppointmentTimesInpu
 
 const prompt = ai.definePrompt({
   name: 'suggestAppointmentTimesPrompt',
-  input: {schema: SuggestAppointmentTimesInputSchema},
+  input: {schema: z.object({
+    serviceType: z.string(),
+    staffAvailability: z.string(),
+    timeZone: z.string(),
+    durationMinutes: z.number(),
+    numberOfSuggestions: z.number(),
+  })},
   output: {schema: SuggestAppointmentTimesOutputSchema},
   model: 'googleai/gemini-2.5-flash',
   prompt: `Você é um assistente de IA especialista em agendamentos de uma clínica veterinária.
@@ -65,7 +75,42 @@ export const suggestAppointmentTimesFlow = ai.defineFlow(
     outputSchema: SuggestAppointmentTimesOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    
+    // O fluxo de IA agora busca os dados diretamente do Firestore
+    const staffSnapshot = await getDocs(collection(db, "staff"));
+    const availabilityData = staffSnapshot.docs.map(doc => doc.data());
+    
+    const availabilityMap: Record<string, any[]> = {};
+    availabilityData.forEach(staff => {
+        staff.availability.forEach((day: any) => {
+            if (day.isEnabled) {
+                const dayName = day.dayOfWeek.charAt(0).toUpperCase() + day.dayOfWeek.slice(1);
+                if (!availabilityMap[dayName]) {
+                    availabilityMap[dayName] = [];
+                }
+                availabilityMap[dayName].push(`${day.startTime}-${day.endTime}`);
+            }
+        });
+    });
+
+    const appointmentsSnapshot = await getDocs(collection(db, "appointments"));
+    const blockedTimes = appointmentsSnapshot.docs.map(doc => doc.data().date);
+
+    const availabilityWithBlockedTimes = {
+      ...availabilityMap,
+      blocked: blockedTimes,
+      dateRange: {
+        start: new Date(input.date).toISOString(),
+        end: addDays(new Date(input.date), 1).toISOString()
+      }
+    };
+    
+    const promptInput = {
+      ...input,
+      staffAvailability: JSON.stringify(availabilityWithBlockedTimes)
+    };
+    
+    const {output} = await prompt(promptInput);
     return output!;
   }
 );

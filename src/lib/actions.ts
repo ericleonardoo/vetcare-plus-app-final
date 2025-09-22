@@ -1,7 +1,7 @@
 
 'use server';
 
-import { suggestAppointmentTimesFlow } from "@/ai/flows/suggest-appointment-times";
+import { suggestAppointmentTimes as suggestAppointmentTimesFlow } from "@/ai/flows/suggest-appointment-times";
 import { chat as chatFlow } from "@/ai/flows/chat";
 import type { ChatInput, ChatOutput } from "@/ai/flows/chat";
 import { generateCarePlan as generateCarePlanFlow } from "@/ai/flows/generate-care-plan";
@@ -49,31 +49,16 @@ export async function getSuggestedTimes(data: AppointmentFormInput) {
         return { success: false, error: "Dados inválidos fornecidos." };
     }
     
-    const staffSnapshot = await getDocs(collection(db, "staff"));
-    const staffAvailabilityList = staffSnapshot.docs.map(doc => {
-      const staffData = doc.data();
-      const availabilityMap: Record<string, string[]> = {};
-      staffData.availability.forEach((day: any) => {
-        if (day.isEnabled) {
-          const dayName = day.dayOfWeek.charAt(0).toUpperCase() + day.dayOfWeek.slice(1);
-          availabilityMap[dayName] = [`${day.startTime}-${day.endTime}`];
-        }
-      });
-      return availabilityMap;
-    });
-    
-    const staffAvailability = JSON.stringify(staffAvailabilityList);
-
     const { serviceType, timeZone } = validatedData.data;
     const durationMinutes = serviceDurations[serviceType] || 30;
 
     try {
         const result = await suggestAppointmentTimesFlow({
             serviceType,
-            staffAvailability,
             timeZone,
             durationMinutes,
             numberOfSuggestions: 5,
+            date: new Date().toISOString(), // Passa a data atual como padrão
         });
         return { success: true, data: result.suggestedAppointmentTimes };
     } catch (error) {
@@ -90,55 +75,21 @@ export async function getSuggestedTimesForPortal(data: PortalAppointmentFormInpu
     }
 
     const { serviceType, timeZone, date } = validatedData.data;
-
-    const staffSnapshot = await getDocs(collection(db, "staff"));
-    const availabilityData = staffSnapshot.docs.map(doc => doc.data());
-    
-    const availabilityMap: Record<string, any[]> = {};
-    availabilityData.forEach(staff => {
-        staff.availability.forEach((day: any) => {
-            if (day.isEnabled) {
-                const dayName = day.dayOfWeek.charAt(0).toUpperCase() + day.dayOfWeek.slice(1);
-                if (!availabilityMap[dayName]) {
-                    availabilityMap[dayName] = [];
-                }
-                availabilityMap[dayName].push(`${day.startTime}-${day.endTime}`);
-            }
-        });
-    });
-
-    const appointmentsSnapshot = await getDocs(collection(db, "appointments"));
-    const blockedTimes = appointmentsSnapshot.docs.map(doc => doc.data().date);
-
-    const availabilityWithBlockedTimes = {
-      ...availabilityMap,
-      blocked: blockedTimes,
-      dateRange: {
-        start: date.toISOString(),
-        end: addDays(date, 1).toISOString()
-      }
-    }
-
     const durationMinutes = serviceDurations[serviceType] || 30;
 
     try {
+        // A Server Action agora apenas passa os dados para o fluxo de IA.
+        // Toda a lógica de busca de dados do Firestore foi movida para o fluxo.
         const result = await suggestAppointmentTimesFlow({
             serviceType,
-            staffAvailability: JSON.stringify(availabilityWithBlockedTimes),
             timeZone,
             durationMinutes,
             numberOfSuggestions: 8,
+            date: date.toISOString(),
         });
 
-        const filteredTimes = result.suggestedAppointmentTimes.filter(time => {
-            const suggestedDate = new Date(time);
-            return suggestedDate.getFullYear() === date.getFullYear() &&
-                   suggestedDate.getMonth() === date.getMonth() &&
-                   suggestedDate.getDate() === date.getDate();
-        });
-
-
-        return { success: true, data: filteredTimes };
+        // O fluxo já retorna os horários filtrados pela data, então o filtro aqui não é mais necessário.
+        return { success: true, data: result.suggestedAppointmentTimes };
     } catch (error) {
         console.error("Erro no fluxo de IA:", error);
         return { success: false, error: "Falha ao sugerir horários. Por favor, tente novamente mais tarde." };
