@@ -2,7 +2,7 @@
 'use client';
 
 import { useAppointments } from "@/context/AppointmentsContext";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { 
   Card,
   CardHeader,
@@ -43,47 +43,44 @@ export default function ProfessionalDashboard() {
   const { invoices, loading: invoicesLoading } = useInvoices();
   const { inventory, loading: inventoryLoading } = useInventory();
 
+  const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
+  const [stats, setStats] = useState({ totalToday: 0, totalPets: 0, totalTutors: 0, monthlyRevenue: 0, accountsReceivable: 0 });
+  const [chartData, setChartData] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const upcomingAppointments = useMemo(() => 
-    appointments
+    const upcoming = appointments
       .filter(apt => {
         const aptDate = new Date(apt.date);
         return aptDate.getTime() >= today.getTime() && apt.status !== 'Realizado';
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(0, 5),
-    [appointments, today]
-  );
-  
-  const stats = useMemo(() => {
-    const totalToday = appointments.filter(apt => {
-        const aptDate = new Date(apt.date);
-        aptDate.setHours(0,0,0,0);
-        return aptDate.getTime() === today.getTime();
-      }).length;
+      .slice(0, 5);
+    setUpcomingAppointments(upcoming);
 
-    const totalPets = pets.length;
-    const totalTutors = new Set(pets.map(p => p.tutorId)).size;
-    
     const firstDayOfMonth = startOfMonth(today);
     const lastDayOfMonth = endOfMonth(today);
 
-    const monthlyRevenue = invoices
-      .filter(inv => inv.status === 'Pago' && inv.paidAt && inv.paidAt.toDate() >= firstDayOfMonth && inv.paidAt.toDate() <= lastDayOfMonth)
-      .reduce((sum, inv) => sum + inv.totalAmount, 0);
+    const newStats = {
+      totalToday: appointments.filter(apt => {
+          const aptDate = new Date(apt.date);
+          aptDate.setHours(0,0,0,0);
+          return aptDate.getTime() === today.getTime();
+        }).length,
+      totalPets: pets.length,
+      totalTutors: new Set(pets.map(p => p.tutorId)).size,
+      monthlyRevenue: invoices
+        .filter(inv => inv.status === 'Pago' && inv.paidAt && inv.paidAt.toDate() >= firstDayOfMonth && inv.paidAt.toDate() <= lastDayOfMonth)
+        .reduce((sum, inv) => sum + inv.totalAmount, 0),
+      accountsReceivable: invoices
+        .filter(inv => inv.status === 'Pendente' || inv.status === 'Atrasado')
+        .reduce((sum, inv) => sum + inv.totalAmount, 0)
+    };
+    setStats(newStats);
 
-    const accountsReceivable = invoices
-      .filter(inv => inv.status === 'Pendente' || inv.status === 'Atrasado')
-      .reduce((sum, inv) => sum + inv.totalAmount, 0);
-
-    return { totalToday, totalPets, totalTutors, monthlyRevenue, accountsReceivable };
-  }, [appointments, pets, invoices, today]);
-
-  const chartData = useMemo(() => {
-    const start = startOfWeek(today, { weekStartsOn: 1 }); // Começa na segunda
+    const start = startOfWeek(today, { weekStartsOn: 1 });
     const weekDays = eachDayOfInterval({ start, end: new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000) });
     
     const data = weekDays.map(day => ({
@@ -93,19 +90,17 @@ export default function ProfessionalDashboard() {
 
     appointments.forEach(apt => {
       const aptDate = parseISO(apt.date);
-      const dayIndex = (aptDate.getDay() + 6) % 7; // Seg=0, Dom=6
-      const weekStartDay = start.getDate();
-      const aptDay = aptDate.getDate();
-
+      const dayIndex = (aptDate.getDay() + 6) % 7;
       if(aptDate >= start && aptDate <= new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000)) {
          if (data[dayIndex]) {
             data[dayIndex].total += 1;
          }
       }
     });
+    setChartData(data);
 
-    return data;
-  }, [appointments, today]);
+  }, [appointments, pets, invoices]);
+
 
   const lowStockItems = useMemo(() => 
     inventory.filter(item => item.quantity <= 5).slice(0, 5), 
