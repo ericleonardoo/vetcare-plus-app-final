@@ -1,7 +1,7 @@
 'use client';
 
-import { scheduleHumanFollowUp, ScheduleHumanFollowUpInput } from '@/lib/actions';
-import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
+import { scheduleHumanFollowUp, ScheduleHumanFollowUpInput, getNotifications, clearNotifications as clearApi } from '@/lib/actions';
+import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
 
 // O tipo de output é definido aqui para evitar importações circulares ou exports inválidos.
 export type ChatNotification = {
@@ -23,22 +23,31 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
 export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<ChatNotification[]>([]);
 
-  const addNotification = useCallback(async (notification: ScheduleHumanFollowUpInput) => {
-    
-    // Call the server action which in turn calls the Genkit tool/flow
-    const result = await scheduleHumanFollowUp(notification);
+  useEffect(() => {
+    // Carrega as notificações iniciais do backend em memória.
+    const fetchNotifications = async () => {
+      const result = await getNotifications();
+      if (result.success) {
+        setNotifications(result.data);
+      }
+    };
+    fetchNotifications();
+  }, []);
 
+  const addNotification = useCallback(async (notification: ScheduleHumanFollowUpInput) => {
+    const result = await scheduleHumanFollowUp(notification);
     if (result.success && result.data) {
+        // Atualiza o estado local com a nova notificação retornada.
         setNotifications((prev) => [...prev, result.data!]);
     } else {
         console.error("Falha ao criar notificação:", result.error);
-        // Optionally, handle the error in the UI
     }
   }, []);
   
-  const clearNotifications = () => {
+  const clearNotifications = useCallback(async () => {
+    await clearApi();
     setNotifications([]);
-  };
+  }, []);
 
   return (
     <NotificationsContext.Provider value={{ notifications, addNotification, clearNotifications }}>

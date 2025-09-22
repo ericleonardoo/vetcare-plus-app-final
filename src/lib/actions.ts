@@ -1,13 +1,16 @@
+
 'use server';
 
 import { suggestAppointmentTimes } from "@/ai/flows/suggest-appointment-times";
-import { chat as chatFlow, ChatInput, ChatOutput } from "@/ai/flows/chat";
-import { generateCarePlan as generateCarePlanFlow, GenerateCarePlanInput, GenerateCarePlanOutput } from "@/ai/flows/generate-care-plan";
-import { scheduleHumanFollowUpFlow } from '@/ai/tools/clinic-tools';
+import { chat as chatFlow } from "@/ai/flows/chat";
+import type { ChatInput, ChatOutput } from "@/ai/flows/chat";
+import { generateCarePlan as generateCarePlanFlow } from "@/ai/flows/generate-care-plan";
+import type { GenerateCarePlanInput, GenerateCarePlanOutput } from "@/ai/flows/generate-care-plan";
+import { scheduleHumanFollowUpFlow, getNotifications as getNotificationsTool, clearAllNotifications as clearNotificationsTool } from '@/ai/tools/clinic-tools';
 import { z } from "zod";
-import { addDays, format, set } from "date-fns";
+import { addDays } from "date-fns";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db, auth } from "./firebase";
+import { db } from "./firebase";
 import { revalidatePath } from "next/cache";
 
 const appointmentFormSchema = z.object({
@@ -94,7 +97,6 @@ export async function getSuggestedTimesForPortal(data: PortalAppointmentFormInpu
 
     // Convertemos o formato do Firestore para o formato JSON que a IA espera
     const availabilityMap: Record<string, string[]> = {};
-    const dayMapping = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     
     availabilityData.forEach((day: any) => {
         if(day.isEnabled) {
@@ -183,6 +185,16 @@ export async function scheduleHumanFollowUp(input: ScheduleHumanFollowUpInput) {
         return { success: false, error: 'Falha ao notificar o atendente.'}
     }
 }
+
+export async function getNotifications() {
+    return { success: true, data: await getNotificationsTool() };
+}
+
+export async function clearNotifications() {
+    await clearNotificationsTool();
+    return { success: true };
+}
+
 
 // Ações do Perfil do Tutor com Firestore
 const profileFormSchema = z.object({

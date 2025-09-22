@@ -7,11 +7,11 @@
  * - ChatInput - O tipo de entrada para a função de chat.
  * - ChatOutput - O tipo de retorno para a função de chat.
  */
-
+import '@/lib/genkit.config'; // Garante que o Genkit seja configurado!
 import { ai } from '@/ai/genkit';
 import { scheduleHumanFollowUp } from '@/ai/tools/clinic-tools';
 import { z } from 'genkit';
-import { Message, Part, ToolRequestPart, renderToolResponse, toolRequest, } from 'genkit';
+import { Message, renderToolResponse } from 'genkit';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -34,7 +34,7 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
   return chatFlow(input);
 }
 
-const prompt = ai.definePrompt({
+const chatPrompt = ai.definePrompt({
   name: 'chatPrompt',
   input: { schema: z.object({ 
       history: z.array(z.any()),
@@ -43,6 +43,7 @@ const prompt = ai.definePrompt({
    }) },
   output: { format: 'text' },
   tools: [scheduleHumanFollowUp],
+  model: 'googleai/gemini-2.5-flash',
   prompt: `Você é "Dr. Gato", um assistente de IA amigável e prestativo da clínica veterinária VetCare+.
 Seu trabalho é responder a perguntas sobre a clínica, seus serviços, agendamentos e fornecer conselhos gerais sobre cuidados com animais de estimação.
 Seja sempre educado, empático e profissional.
@@ -73,7 +74,7 @@ Histórico da Conversa:
 `,
 });
 
-const chatFlow = ai.defineFlow(
+export const chatFlow = ai.defineFlow(
   {
     name: 'chatFlow',
     inputSchema: ChatInputSchema,
@@ -86,15 +87,19 @@ const chatFlow = ai.defineFlow(
 
     // Busca os dados do usuário se um ID for fornecido
     if (input.userId) {
-        const userDoc = await getDoc(doc(db, 'tutors', input.userId));
-        if (userDoc.exists()) {
-            const data = userDoc.data();
-            userName = data.name;
-            userContact = data.email || data.phone;
+        try {
+            const userDoc = await getDoc(doc(db, 'tutors', input.userId));
+            if (userDoc.exists()) {
+                const data = userDoc.data();
+                userName = data.name;
+                userContact = data.email || data.phone;
+            }
+        } catch (e) {
+            console.error("Failed to fetch user data:", e);
         }
     }
 
-    const messages: Message[] = input.history.map(
+    const messages = input.history.map(
       (message) =>
         new Message({
           role: message.role,
@@ -103,24 +108,26 @@ const chatFlow = ai.defineFlow(
     );
 
     while (true) {
-      const response = await prompt({ history: messages, userName, userContact });
-      const choice = response.choices[0];
+      const llmResponse = await chatPrompt({ history: messages, userName, userContact });
+      const choice = llmResponse.choices[0];
 
       if (!choice) {
         throw new Error('No valid choice in AI response.');
       }
       
-      const toolRequestPart = choice.message.content.find(part => part.toolRequest) as ToolRequestPart | undefined;
-      
-      if (!toolRequestPart) {
-        // Se não houver solicitação de ferramenta, retorne o texto da resposta.
-        return choice.message.content.map(part => part.text || '').join('');
+      const toolRequest = choice.toolRequest;
+      if (!toolRequest) {
+        return choice.text;
       }
-
-      // Se houver uma solicitação de ferramenta, execute-a.
-      const toolResponse = await toolRequestPart.toolRequest.execute();
+      
       messages.push(choice.message);
-      messages.push(renderToolResponse(toolRequestPart.toolRequest, toolResponse));
+      
+      const toolResponse = await toolRequest.execute({
+          // Passamos o contexto explicitamente para a ferramenta
+          context: { userName, userContact }
+      });
+
+      messages.push(renderToolResponse(toolRequest, toolResponse));
     }
   }
 );

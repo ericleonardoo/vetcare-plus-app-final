@@ -7,7 +7,7 @@
  * - GenerateCarePlanInput - O tipo de entrada para a função generateCarePlan.
  * - GenerateCarePlanOutput - O tipo de retorno para a função generateCarePlan.
  */
-
+import '@/lib/genkit.config'; // Garante que o Genkit seja configurado!
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
@@ -43,6 +43,7 @@ const prompt = ai.definePrompt({
   name: 'generateCarePlanPrompt',
   input: { schema: GenerateCarePlanInputSchema },
   output: { schema: GenerateCarePlanOutputSchema },
+  model: 'googleai/gemini-2.5-flash',
   prompt: `Você é um veterinário especialista em bem-estar animal criando um plano de cuidados para um pet.
 Seu objetivo é fornecer recomendações claras, úteis e concisas para o tutor do animal.
 Crie um plano de cuidados para o pet com as seguintes características:
@@ -57,7 +58,7 @@ O conteúdo da recomendação deve ter no máximo 2-3 frases.
 `,
 });
 
-const generateCarePlanFlow = ai.defineFlow(
+export const generateCarePlanFlow = ai.defineFlow(
   {
     name: 'generateCarePlanFlow',
     inputSchema: GenerateCarePlanInputSchema,

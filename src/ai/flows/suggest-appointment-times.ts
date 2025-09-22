@@ -8,7 +8,7 @@
  * - SuggestAppointmentTimesInput - The input type for the suggestAppointmentTimes function.
  * - SuggestAppointmentTimesOutput - The return type for the suggestAppointmentTimes function.
  */
-
+import '@/lib/genkit.config'; // Garante que o Genkit seja configurado!
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
@@ -36,6 +36,7 @@ const prompt = ai.definePrompt({
   name: 'suggestAppointmentTimesPrompt',
   input: {schema: SuggestAppointmentTimesInputSchema},
   output: {schema: SuggestAppointmentTimesOutputSchema},
+  model: 'googleai/gemini-2.5-flash',
   prompt: `Você é um assistente de IA especialista em agendamentos de uma clínica veterinária.
 Sua tarefa é sugerir os melhores horários para uma consulta com base nas informações fornecidas.
 
@@ -58,7 +59,7 @@ Retorne os horários sugeridos no formato ISO 8601 dentro de um array JSON.
 `,
 });
 
-const suggestAppointmentTimesFlow = ai.defineFlow(
+export const suggestAppointmentTimesFlow = ai.defineFlow(
   {
     name: 'suggestAppointmentTimesFlow',
     inputSchema: SuggestAppointmentTimesInputSchema,
