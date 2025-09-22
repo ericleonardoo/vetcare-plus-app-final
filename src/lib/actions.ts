@@ -9,7 +9,7 @@ import type { GenerateCarePlanInput, GenerateCarePlanOutput } from "@/ai/flows/g
 import { scheduleHumanFollowUpFlow, getNotifications as getNotificationsTool, clearAllNotifications as clearNotificationsTool } from '@/ai/tools/clinic-tools';
 import { z } from "zod";
 import { addDays } from "date-fns";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { revalidatePath } from "next/cache";
 
@@ -49,20 +49,20 @@ export async function getSuggestedTimes(data: AppointmentFormInput) {
         return { success: false, error: "Dados inválidos fornecidos." };
     }
     
-    const staffDoc = await getDoc(doc(db, "staff", "SflKAg84t3O3aFf12345")); 
-    if(!staffDoc.exists()) {
-        return { success: false, error: "Veterinário padrão não encontrado." };
-    }
-
-    const availabilityData = staffDoc.data().availability;
-    const availabilityMap: Record<string, string[]> = {};
-    availabilityData.forEach((day: any) => {
-        if(day.isEnabled) {
-            const dayName = day.dayOfWeek.charAt(0).toUpperCase() + day.dayOfWeek.slice(1);
-            availabilityMap[dayName] = [`${day.startTime}-${day.endTime}`];
+    const staffSnapshot = await getDocs(collection(db, "staff"));
+    const staffAvailabilityList = staffSnapshot.docs.map(doc => {
+      const staffData = doc.data();
+      const availabilityMap: Record<string, string[]> = {};
+      staffData.availability.forEach((day: any) => {
+        if (day.isEnabled) {
+          const dayName = day.dayOfWeek.charAt(0).toUpperCase() + day.dayOfWeek.slice(1);
+          availabilityMap[dayName] = [`${day.startTime}-${day.endTime}`];
         }
+      });
+      return availabilityMap;
     });
-    const staffAvailability = JSON.stringify(availabilityMap);
+    
+    const staffAvailability = JSON.stringify(staffAvailabilityList);
 
     const { serviceType, timeZone } = validatedData.data;
     const durationMinutes = serviceDurations[serviceType] || 30;
@@ -91,41 +91,24 @@ export async function getSuggestedTimesForPortal(data: PortalAppointmentFormInpu
 
     const { serviceType, timeZone, date } = validatedData.data;
 
-    const professionalId = "SflKAg84t3O3aFf12345";
+    const staffSnapshot = await getDocs(collection(db, "staff"));
+    const availabilityData = staffSnapshot.docs.map(doc => doc.data());
     
-    const staffDoc = await getDoc(doc(db, "staff", professionalId));
-    if (!staffDoc.exists() || !staffDoc.data().isActive) {
-      return { success: false, error: "Veterinário não encontrado ou inativo." };
-    }
-    
-    const availabilityData = staffDoc.data().availability;
-
-    const availabilityMap: Record<string, any> = {};
-    availabilityData.forEach((day: any) => {
-      if (day.isEnabled) {
-        const dayName = day.dayOfWeek.charAt(0).toUpperCase() + day.dayOfWeek.slice(1);
-        availabilityMap[dayName] = [`${day.startTime}-${day.endTime}`];
-        if (day.breaks && day.breaks.length > 0) {
-          availabilityMap[dayName].push(...day.breaks.map((b: any) => `break:${b.start}-${b.end}`));
-        }
-      }
-    });
-
-    const blockedTimes: string[] = [];
-    const appointmentsSnapshot = await getDoc(doc(db, "appointments"));
-    if (appointmentsSnapshot.exists()) {
-        const appointmentsData = appointmentsSnapshot.data();
-        Object.values(appointmentsData).forEach((apt: any) => {
-            const aptDate = new Date(apt.date);
-            if (
-                aptDate.getFullYear() === date.getFullYear() &&
-                aptDate.getMonth() === date.getMonth() &&
-                aptDate.getDate() === date.getDate()
-            ) {
-                blockedTimes.push(apt.date);
+    const availabilityMap: Record<string, any[]> = {};
+    availabilityData.forEach(staff => {
+        staff.availability.forEach((day: any) => {
+            if (day.isEnabled) {
+                const dayName = day.dayOfWeek.charAt(0).toUpperCase() + day.dayOfWeek.slice(1);
+                if (!availabilityMap[dayName]) {
+                    availabilityMap[dayName] = [];
+                }
+                availabilityMap[dayName].push(`${day.startTime}-${day.endTime}`);
             }
         });
-    }
+    });
+
+    const appointmentsSnapshot = await getDocs(collection(db, "appointments"));
+    const blockedTimes = appointmentsSnapshot.docs.map(doc => doc.data().date);
 
     const availabilityWithBlockedTimes = {
       ...availabilityMap,
