@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Users, Bone, Cat, Dog, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useTutors } from "@/context/TutorsContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function ProfessionalPatientsPage() {
@@ -36,6 +37,36 @@ export default function ProfessionalPatientsPage() {
   }
 
   const isLoading = petsLoading || tutorsLoading;
+
+  const TableSkeleton = () => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead><Skeleton className="h-4 w-32" /></TableHead>
+          <TableHead><Skeleton className="h-4 w-24" /></TableHead>
+          <TableHead><Skeleton className="h-4 w-32" /></TableHead>
+          <TableHead><Skeleton className="h-4 w-32" /></TableHead>
+          <TableHead className="text-right"><Skeleton className="h-4 w-24 ml-auto" /></TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {[...Array(5)].map((_, i) => (
+          <TableRow key={i}>
+            <TableCell>
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-9 w-9 rounded-full" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </TableCell>
+            <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+            <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+            <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+            <TableCell className="text-right"><Skeleton className="h-8 w-32 ml-auto" /></TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
 
   return (
     <>
@@ -61,75 +92,71 @@ export default function ProfessionalPatientsPage() {
           <div className="grid gap-2">
             <CardTitle>Todos os Pacientes</CardTitle>
             <CardDescription>
-             {!isLoading && `Total de ${pets.length} pacientes cadastrados na clínica.`}
+             {!isLoading ? `Total de ${pets.length} pacientes cadastrados na clínica.` : <Skeleton className="h-4 w-48" />}
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Paciente</TableHead>
-                <TableHead>Espécie</TableHead>
-                <TableHead>Raça</TableHead>
-                <TableHead>Tutor(a)</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+          {isLoading ? (
+            <TableSkeleton />
+          ) : pets.length > 0 ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
-                     <div className="flex justify-center items-center gap-2">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        <span className="text-muted-foreground">Carregando pacientes...</span>
-                    </div>
-                  </TableCell>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead>Espécie</TableHead>
+                  <TableHead>Raça</TableHead>
+                  <TableHead>Tutor(a)</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ) : pets.length > 0 ? (
-                pets.map((pet) => {
-                  const Icon = getPetIcon(pet.species);
-                  const tutor = tutors.find(t => t.id === pet.tutorId);
-                  return (
-                    <TableRow key={pet.id}>
-                       <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                                <AvatarImage src={pet.avatarUrl} alt={pet.name} />
-                                <AvatarFallback>{pet.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="font-medium">{pet.name}</div>
+              </TableHeader>
+              <TableBody>
+                  {pets.map((pet) => {
+                    const Icon = getPetIcon(pet.species);
+                    const tutor = tutors.find(t => t.id === pet.tutorId);
+                    return (
+                      <TableRow key={pet.id}>
+                         <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-9 w-9">
+                                  <AvatarImage src={pet.avatarUrl} alt={pet.name} />
+                                  <AvatarFallback>{pet.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div className="font-medium">{pet.name}</div>
+                            </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                              <Icon className="h-4 w-4 text-muted-foreground" />
+                              {pet.species}
                           </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                            {pet.species}
-                        </div>
-                      </TableCell>
-                       <TableCell>{pet.breed}</TableCell>
-                       <TableCell>{tutor?.name || 'N/A'}</TableCell>
-                      <TableCell className="text-right">
-                         <Button asChild variant="outline" size="sm">
-                            <Link href={`/professional/pacientes/${pet.id}`}>Ver Prontuário</Link>
-                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
-                    Nenhum paciente encontrado.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                        </TableCell>
+                         <TableCell>{pet.breed}</TableCell>
+                         <TableCell>{tutor?.name || 'N/A'}</TableCell>
+                        <TableCell className="text-right">
+                           <Button asChild variant="outline" size="sm">
+                              <Link href={`/professional/pacientes/${pet.id}`}>Ver Prontuário</Link>
+                           </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-16 px-6 border-2 border-dashed rounded-lg">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">Sua base de pacientes está vazia</h3>
+              <p className="mt-2 text-sm text-muted-foreground">Comece adicionando seu primeiro paciente para construir o histórico da clínica.</p>
+              <Button className="mt-6" asChild>
+                <Link href="/portal/pets/novo">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar primeiro paciente
+                </Link>
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </>
   );
 }
-
-    

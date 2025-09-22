@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { usePets } from '@/context/PetsContext';
 import { useMemo, useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function HealthHistoryPage() {
   const { pets, loading } = usePets();
@@ -40,11 +41,45 @@ export default function HealthHistoryPage() {
     });
   }, [allHistoryItems, selectedPetId, pets]);
 
+  const TimelineSkeleton = () => (
+    <div className="relative pl-6">
+      <div className="absolute left-9 top-0 h-full w-0.5 bg-border" />
+      {[...Array(3)].map((_, index) => (
+        <div key={index} className="flex gap-6 mb-10">
+          <Skeleton className="z-10 flex h-8 w-8 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-5 w-1/5" />
+            </div>
+            <Skeleton className="h-6 w-1/2" />
+            <Skeleton className="h-4 w-1/4" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   if (loading) {
     return (
-         <div className="flex flex-col items-center justify-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Carregando histórico de saúde...</p>
+        <div className="flex flex-col gap-8">
+            <div>
+                <Skeleton className="h-8 w-1/2 mb-2" />
+                <Skeleton className="h-4 w-3/4" />
+            </div>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <Skeleton className="h-6 w-48 mb-2" />
+                        <Skeleton className="h-4 w-64" />
+                    </div>
+                    <Skeleton className="h-10 w-48" />
+                </CardHeader>
+                <CardContent>
+                    <TimelineSkeleton />
+                </CardContent>
+            </Card>
         </div>
     )
   }

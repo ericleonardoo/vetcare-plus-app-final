@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ListFilter, File, Wallet, Loader2, CheckCircle, Clock } from 'lucide-react';
+import { ListFilter, File, Wallet, Loader2, CheckCircle, Clock, Receipt } from 'lucide-react';
 import { useInvoices, Invoice } from '@/context/InvoicesContext';
 import { useTutors } from '@/context/TutorsContext';
 import {
@@ -41,6 +41,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProfessionalFinancialPage() {
   const { invoices, loading, updateInvoiceStatus } = useInvoices();
@@ -88,6 +89,35 @@ export default function ProfessionalFinancialPage() {
 
   const isLoading = loading || tutorsLoading;
 
+  const TableSkeleton = () => (
+    <Table>
+        <TableHeader>
+            <TableRow>
+                <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                <TableHead><Skeleton className="h-4 w-24" /></TableHead>
+                <TableHead><Skeleton className="h-4 w-32" /></TableHead>
+                <TableHead><Skeleton className="h-4 w-32" /></TableHead>
+                <TableHead className="text-right"><Skeleton className="h-4 w-24 ml-auto" /></TableHead>
+                <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
+                <TableHead className="text-right"><Skeleton className="h-4 w-32 ml-auto" /></TableHead>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+            {[...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell className='text-center'><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
+                    <TableCell className='text-right'><Skeleton className="h-8 w-32 ml-auto" /></TableCell>
+                </TableRow>
+            ))}
+        </TableBody>
+    </Table>
+  );
+
   return (
     <>
     <div className="flex flex-col gap-8">
@@ -129,45 +159,49 @@ export default function ProfessionalFinancialPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fatura</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Pet</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                 <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" /></TableCell></TableRow>
-              ) : filteredInvoices.length > 0 ? (
-                filteredInvoices.map((invoice) => {
-                    const tutor = tutors.find(t => t.id === invoice.clientId);
-                    return (
-                        <TableRow key={invoice.id}>
-                            <TableCell className="font-medium">#{invoice.invoiceId}</TableCell>
-                            <TableCell>{new Date(invoice.createdAt.toDate()).toLocaleDateString('pt-BR')}</TableCell>
-                            <TableCell>{tutor?.name || 'N/A'}</TableCell>
-                            <TableCell>{invoice.petName}</TableCell>
-                            <TableCell className="text-right">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.totalAmount)}</TableCell>
-                            <TableCell className="text-center"><Badge variant={getStatusVariant(invoice.status)}>{invoice.status}</Badge></TableCell>
-                            <TableCell className="text-right">
-                                {invoice.status !== 'Pago' && (
-                                    <Button variant="outline" size="sm" onClick={() => setInvoiceToUpdate(invoice)}>Marcar como Paga</Button>
-                                )}
-                            </TableCell>
-                        </TableRow>
-                    )
-                })
-              ) : (
-                <TableRow><TableCell colSpan={7} className="h-24 text-center">Nenhuma fatura encontrada com os filtros selecionados.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+          {isLoading ? (
+            <TableSkeleton />
+          ) : filteredInvoices.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fatura</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Pet</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                  {filteredInvoices.map((invoice) => {
+                      const tutor = tutors.find(t => t.id === invoice.clientId);
+                      return (
+                          <TableRow key={invoice.id}>
+                              <TableCell className="font-medium">#{invoice.invoiceId}</TableCell>
+                              <TableCell>{new Date(invoice.createdAt.toDate()).toLocaleDateString('pt-BR')}</TableCell>
+                              <TableCell>{tutor?.name || 'N/A'}</TableCell>
+                              <TableCell>{invoice.petName}</TableCell>
+                              <TableCell className="text-right">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.totalAmount)}</TableCell>
+                              <TableCell className="text-center"><Badge variant={getStatusVariant(invoice.status)}>{invoice.status}</Badge></TableCell>
+                              <TableCell className="text-right">
+                                  {invoice.status !== 'Pago' && (
+                                      <Button variant="outline" size="sm" onClick={() => setInvoiceToUpdate(invoice)}>Marcar como Paga</Button>
+                                  )}
+                              </TableCell>
+                          </TableRow>
+                      )
+                  })}
+              </TableBody>
+            </Table>
+          ) : (
+             <div className="text-center py-16 px-6 border-2 border-dashed rounded-lg">
+                <Receipt className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">Nenhuma fatura encontrada</h3>
+                <p className="mt-2 text-sm text-muted-foreground">Não há faturas que correspondam aos filtros selecionados.</p>
+              </div>
+          )}
         </CardContent>
       </Card>
     </div>

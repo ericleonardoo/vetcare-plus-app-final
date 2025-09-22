@@ -33,6 +33,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const dayNames: { [key: string]: string } = {
   monday: 'Segunda-feira',
@@ -143,6 +144,32 @@ export default function StaffPage() {
     setIsDeleteAlertOpen(true);
   }
 
+  const TableSkeleton = () => (
+     <Table>
+        <TableHeader>
+            <TableRow>
+                <TableHead><Skeleton className="h-4 w-32" /></TableHead>
+                <TableHead><Skeleton className="h-4 w-24" /></TableHead>
+                <TableHead className="text-center"><Skeleton className="h-4 w-20" /></TableHead>
+                <TableHead className="text-right"><Skeleton className="h-4 w-24 ml-auto" /></TableHead>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+            {[...Array(3)].map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-16 mx-auto" /></TableCell>
+                    <TableCell className="text-right flex justify-end gap-2">
+                      <Skeleton className="h-8 w-20" />
+                      <Skeleton className="h-8 w-8" />
+                    </TableCell>
+                </TableRow>
+            ))}
+        </TableBody>
+    </Table>
+  );
+
   return (
     <>
       <header className="flex items-center justify-between">
@@ -173,47 +200,46 @@ export default function StaffPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Cargo</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+          {loading ? (
+            <TableSkeleton />
+          ) : staff.length > 0 ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
-                  </TableCell>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Cargo</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ) : staff.length > 0 ? (
-                staff.map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell className="font-medium">{member.name}</TableCell>
-                    <TableCell>{member.role}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={member.isActive ? 'default' : 'secondary'}>
-                        {member.isActive ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenModal(member)}>Editar</Button>
-                      <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(member)}><Trash2 className="h-4 w-4" /></Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
-                    Nenhum membro da equipe encontrado. Comece adicionando um.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                  {staff.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">{member.name}</TableCell>
+                      <TableCell>{member.role}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={member.isActive ? 'default' : 'secondary'}>
+                          {member.isActive ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenModal(member)}>Editar</Button>
+                        <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(member)}><Trash2 className="h-4 w-4" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-16 px-6 border-2 border-dashed rounded-lg">
+                <ClipboardUser className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">Nenhum membro na equipe</h3>
+                <p className="mt-2 text-sm text-muted-foreground">Comece adicionando os profissionais da sua clínica para gerenciar os horários.</p>
+                <Button className="mt-6" onClick={() => handleOpenModal()}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Membro da Equipe
+                </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
       

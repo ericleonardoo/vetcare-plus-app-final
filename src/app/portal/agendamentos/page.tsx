@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { PlusCircle, ListFilter, File, Loader2 } from 'lucide-react';
+import { PlusCircle, ListFilter, File, Loader2, CalendarX2 } from 'lucide-react';
 import Link from 'next/link';
 import {
   Table,
@@ -33,6 +33,7 @@ import { usePets } from '@/context/PetsContext';
 import { useAppointments, Appointment } from '@/context/AppointmentsContext';
 import { useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AppointmentsPage() {
   const { pets } = usePets();
@@ -113,6 +114,45 @@ export default function AppointmentsPage() {
     </Table>
   );
 
+  const renderTableSkeleton = () => (
+     <Table>
+        <TableHeader>
+            <TableRow>
+              <TableHead className="hidden sm:table-cell"><Skeleton className="h-4 w-16" /></TableHead>
+              <TableHead><Skeleton className="h-4 w-24" /></TableHead>
+              <TableHead><Skeleton className="h-4 w-32" /></TableHead>
+              <TableHead className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableHead>
+              <TableHead className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableHead>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+            {[...Array(4)].map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell className="hidden sm:table-cell">
+                        <div className='flex items-center gap-2'>
+                            <Skeleton className="h-8 w-8 rounded-full" />
+                            <Skeleton className="h-4 w-20" />
+                        </div>
+                    </TableCell>
+                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
+                </TableRow>
+            ))}
+        </TableBody>
+    </Table>
+  );
+
+  const renderEmptyState = (message: string) => (
+     <div className="flex flex-col items-center justify-center text-center p-12">
+      <CalendarX2 className="w-16 h-16 text-muted-foreground mb-4" />
+      <h3 className="text-lg font-semibold">Nenhum agendamento aqui</h3>
+      <p className="text-muted-foreground text-sm">{message}</p>
+    </div>
+  );
+
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
@@ -166,16 +206,14 @@ export default function AppointmentsPage() {
         <Card>
             <CardContent className='p-0'>
                 {appointmentsLoading ? (
-                     <div className="flex justify-center items-center p-20">
-                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    </div>
+                     renderTableSkeleton()
                 ) : (
                     <>
                       <TabsContent value="proximos">
-                          {upcomingAppointments.length > 0 ? renderAppointmentsTable(upcomingAppointments) : <p className="p-8 text-center text-muted-foreground">Nenhum próximo agendamento encontrado.</p>}
+                          {upcomingAppointments.length > 0 ? renderAppointmentsTable(upcomingAppointments) : renderEmptyState("Você não tem nenhuma consulta futura marcada.")}
                       </TabsContent>
                       <TabsContent value="passados">
-                          {pastAppointments.length > 0 ? renderAppointmentsTable(pastAppointments) : <p className="p-8 text-center text-muted-foreground">Nenhum agendamento passado encontrado.</p>}
+                          {pastAppointments.length > 0 ? renderAppointmentsTable(pastAppointments) : renderEmptyState("Nenhum agendamento passado foi encontrado.")}
                       </TabsContent>
                     </>
                 )}

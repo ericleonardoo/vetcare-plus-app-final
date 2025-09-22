@@ -23,7 +23,7 @@ import { usePets } from "@/context/PetsContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Clock, PawPrint, PhoneForwarded, Loader2, Users, DollarSign, FileWarning, Package, AlertCircle } from "lucide-react";
+import { ArrowUpRight, Clock, PawPrint, PhoneForwarded, Loader2, Users, DollarSign, FileWarning, Package, AlertCircle, MessageSquareCheck } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/context/NotificationsContext";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
@@ -32,6 +32,7 @@ import { startOfWeek, eachDayOfInterval, format, parseISO, startOfMonth, endOfMo
 import { ptBR } from 'date-fns/locale';
 import { useInvoices } from "@/context/InvoicesContext";
 import { useInventory } from "@/context/InventoryContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function ProfessionalDashboard() {
@@ -132,7 +133,7 @@ export default function ProfessionalDashboard() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.totalToday}</div>}
+            {isLoading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.totalToday}</div>}
             <p className="text-xs text-muted-foreground">
               {stats.totalToday > 0 ? `${stats.totalToday} agendadas para hoje` : "Nenhuma consulta para hoje"}
             </p>
@@ -144,7 +145,7 @@ export default function ProfessionalDashboard() {
             <PawPrint className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.totalPets}</div>}
+            {isLoading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{stats.totalPets}</div>}
             <p className="text-xs text-muted-foreground">
               pacientes cadastrados na clínica
             </p>
@@ -156,7 +157,7 @@ export default function ProfessionalDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyRevenue)}</div>}
+            {isLoading ? <Skeleton className="h-8 w-2/5" /> : <div className="text-2xl font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyRevenue)}</div>}
             <p className="text-xs text-muted-foreground">
               total de faturas pagas no mês
             </p>
@@ -168,7 +169,7 @@ export default function ProfessionalDashboard() {
             <FileWarning className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.accountsReceivable)}</div>}
+            {isLoading ? <Skeleton className="h-8 w-2/5" /> : <div className="text-2xl font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.accountsReceivable)}</div>}
             <p className="text-xs text-muted-foreground">
               soma de faturas pendentes
             </p>
@@ -194,8 +195,15 @@ export default function ProfessionalDashboard() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex justify-center items-center h-48">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-2">
+                  <Skeleton className="h-6 w-24" />
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-5 flex-1" />
+                  <Skeleton className="h-6 w-20" />
+                </div>
+              ))}
             </div>
           ) : (
             <Table>
@@ -263,26 +271,28 @@ export default function ProfessionalDashboard() {
             </CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <XAxis
-                  dataKey="name"
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${value}`}
-                  allowDecimals={false}
-                />
-                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {isLoading ? <Skeleton className="h-[300px] w-full" /> : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData}>
+                  <XAxis
+                    dataKey="name"
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}`}
+                    allowDecimals={false}
+                  />
+                  <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
         </CardContent>
       </Card>
     </div>
@@ -304,7 +314,14 @@ export default function ProfessionalDashboard() {
             </CardHeader>
             <CardContent>
                 {isLoading ? (
-                    <div className="flex justify-center items-center h-48"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                    <div className="space-y-2">
+                      {[...Array(3)].map((_,i) => (
+                        <div key={i} className="flex justify-between">
+                          <Skeleton className="h-5 w-2/3" />
+                          <Skeleton className="h-5 w-1/4" />
+                        </div>
+                      ))}
+                    </div>
                 ) : (
                     <Table>
                         <TableHeader>
@@ -355,7 +372,9 @@ export default function ProfessionalDashboard() {
                     </ul>
                 ) : (
                     <div className="text-center text-muted-foreground p-8">
-                        <p>Nenhuma solicitação de atendimento pendente.</p>
+                        <MessageSquareCheck className="mx-auto h-12 w-12" />
+                        <h3 className="mt-4 text-lg font-semibold">Tudo resolvido!</h3>
+                        <p className="mt-1 text-sm">Sua caixa de entrada de atendimentos está limpa.</p>
                     </div>
                 )}
             </CardContent>

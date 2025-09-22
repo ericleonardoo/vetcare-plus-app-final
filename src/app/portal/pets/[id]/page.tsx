@@ -13,6 +13,7 @@ import { generateCarePlan } from '@/lib/actions';
 import type { GenerateCarePlanOutput } from '@/ai/flows/generate-care-plan';
 import { usePets } from '@/context/PetsContext';
 import { useRouter } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function PetDetailPage({ params }: { params: { id: string } }) {
   const [isPending, startTransition] = useTransition();
@@ -52,9 +53,55 @@ export default function PetDetailPage({ params }: { params: { id: string } }) {
 
   if (petsLoading) {
      return (
-      <div className="text-center">
-        <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Carregando dados do pet...</p>
+      <div className="flex flex-col gap-8">
+        <div>
+           <Skeleton className="h-8 w-40" />
+        </div>
+         <div className="grid gap-8 md:grid-cols-3">
+             <div className="md:col-span-1 flex flex-col gap-8">
+                <Card>
+                  <CardContent className="p-6 text-center flex flex-col items-center">
+                    <Skeleton className="h-32 w-32 rounded-full mb-4" />
+                    <Skeleton className="h-8 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-1/2"/>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {[...Array(4)].map((_, i) => (
+                           <div key={i} className="flex items-center gap-3">
+                              <Skeleton className="h-5 w-5" />
+                              <Skeleton className="h-4 w-full" />
+                          </div>
+                        ))}
+                    </CardContent>
+                </Card>
+             </div>
+             <div className="md:col-span-2 flex flex-col gap-8">
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-48 mb-2" />
+                        <Skeleton className="h-4 w-64" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                          {[...Array(3)].map((_, i) => (
+                            <div key={i} className="flex items-start gap-4">
+                              <Skeleton className="h-10 w-10 rounded-full" />
+                              <div className="flex-1 space-y-2">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-2/3" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+         </div>
       </div>
     );
   }

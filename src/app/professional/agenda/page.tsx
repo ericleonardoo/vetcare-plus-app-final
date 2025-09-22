@@ -4,7 +4,7 @@ import {
   Card,
   CardContent,
 } from '@/components/ui/card';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2, PlusCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2, PlusCircle, CalendarCheck2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useMemo, useTransition } from 'react';
 import { addDays, format, startOfDay, subDays } from 'date-fns';
@@ -19,6 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const vets = ['Dra. Emily Carter', 'Dr. Ben Jacobs'];
 const timeSlots = Array.from({ length: 9 }, (_, i) => `${String(i + 9).padStart(2, '0')}:00`); // 9:00 to 17:00
@@ -109,6 +110,34 @@ export default function AgendaPage() {
 
     const isLoading = appointmentsLoading || petsLoading;
 
+    const AgendaSkeleton = () => (
+         <div className="grid grid-cols-[auto_repeat(2,_minmax(200px,_1fr))] min-w-[800px]">
+            {/* Time Column */}
+            <div className="border-r">
+                <div className="p-2 border-b h-20 flex items-center justify-center font-semibold"><Skeleton className="h-6 w-20" /></div>
+                {timeSlots.map(time => (
+                    <div key={time} className="flex items-center justify-center border-b h-20"><Skeleton className="h-5 w-12" /></div>
+                ))}
+            </div>
+            
+            {/* Vet Columns */}
+            {vets.map(vet => (
+                <div key={vet} className="border-r last:border-r-0">
+                    <div className="p-2 border-b h-20 flex items-center justify-center text-center">
+                        <Skeleton className="h-6 w-32" />
+                    </div>
+                    {timeSlots.map(slot => (
+                        <div key={`${vet}-${slot}`} className="border-b h-20 p-1">
+                             <Skeleton className="h-full w-full rounded-md" />
+                        </div>
+                    ))}
+                </div>
+            ))}
+        </div>
+    );
+
+    const openModal = () => setIsModalOpen(true);
+
 
   return (
     <>
@@ -132,7 +161,7 @@ export default function AgendaPage() {
             
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogTrigger asChild>
-                    <Button disabled={petsLoading}>
+                    <Button disabled={petsLoading} onClick={openModal}>
                         {petsLoading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <PlusCircle className='mr-2 h-4 w-4' />}
                         Nova Consulta
                     </Button>
@@ -207,10 +236,8 @@ export default function AgendaPage() {
         <CardContent className="p-0">
           <div className='overflow-x-auto'>
             {isLoading ? (
-                <div className="flex justify-center items-center h-96">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                </div>
-            ) : (
+                <AgendaSkeleton />
+            ) : appointmentsByDay.length > 0 ? (
                 <div className="grid grid-cols-[auto_repeat(2,_minmax(200px,_1fr))] min-w-[800px]">
                     {/* Time Column */}
                     <div className="border-r">
@@ -246,6 +273,16 @@ export default function AgendaPage() {
                             })}
                         </div>
                     ))}
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center h-[60vh] text-center p-4">
+                  <CalendarCheck2 className="w-16 h-16 text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold">Nenhum agendamento para este dia</h3>
+                  <p className="text-muted-foreground mb-6">A agenda está livre. Que tal adicionar uma nova consulta?</p>
+                  <Button onClick={openModal}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Criar novo agendamento
+                  </Button>
                 </div>
             )}
           </div>

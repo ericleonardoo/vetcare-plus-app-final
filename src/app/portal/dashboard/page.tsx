@@ -10,13 +10,14 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Loader2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Loader2, Dog } from 'lucide-react';
 import Link from 'next/link';
 import { usePets } from '@/context/PetsContext';
 import { useAppointments } from '@/context/AppointmentsContext';
 import { useMemo } from 'react';
 import { useTutor } from '@/context/TutorContext';
 import { useAuth } from '@/context/AuthContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
   const { pets, loading: petsLoading } = usePets();
@@ -41,12 +42,79 @@ export default function DashboardPage() {
 
   const isLoading = tutorLoading || petsLoading || appointmentsLoading;
 
+  const AppointmentsSkeleton = () => (
+    <div className="space-y-4">
+      {[...Array(2)].map((_, i) => (
+        <div key={i} className="flex items-center gap-4 p-2">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const MyPetsSkeleton = () => (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+       {[...Array(2)].map((_, i) => (
+        <Card key={i}>
+            <CardContent className="p-0">
+                <div className="p-6 flex flex-col items-center text-center">
+                    <Skeleton className="h-24 w-24 rounded-full mb-4" />
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
+                </div>
+            </CardContent>
+            <CardFooter className="p-0">
+                <Skeleton className="h-10 w-full rounded-t-none" />
+            </CardFooter>
+        </Card>
+      ))}
+    </div>
+  );
+
   if (isLoading || !tutor) {
      return (
-         <div className="flex flex-col items-center justify-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Carregando seu dashboard...</p>
-        </div>
+         <div className="flex flex-col gap-8">
+            <div>
+              <Skeleton className="h-8 w-1/2 mb-2" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <Card className="lg:col-span-2">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Próximas Consultas</CardTitle>
+                  <Skeleton className="h-8 w-24" />
+                </CardHeader>
+                <CardContent>
+                  <AppointmentsSkeleton />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ações Rápidas</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </CardContent>
+              </Card>
+            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Meus Pets</CardTitle>
+                 <CardDescription>
+                  Gerencie as informações e o histórico de cada um dos seus pets.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MyPetsSkeleton />
+              </CardContent>
+            </Card>
+         </div>
      )
   }
 
@@ -120,28 +188,43 @@ export default function DashboardPage() {
             Gerencie as informações e o histórico de cada um dos seus pets.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {pets.map((pet) => (
-            <Card key={pet.id} className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="p-6 flex flex-col items-center text-center">
-                    <Avatar className="h-24 w-24 mb-4">
-                        <AvatarImage src={pet.avatarUrl} alt={pet.name} data-ai-hint={pet.avatarHint} />
-                        <AvatarFallback>{pet.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <h3 className="text-xl font-bold font-headline">{pet.name}</h3>
-                    <p className="text-sm text-muted-foreground">{pet.breed}</p>
-                </div>
-              </CardContent>
-              <CardFooter className="p-0">
-                <Button variant="ghost" className="w-full rounded-t-none" asChild><Link href={`/portal/pets/${pet.id}`}>Ver Detalhes</Link></Button>
-              </CardFooter>
-            </Card>
-          ))}
-           <Link href="/portal/pets/novo" className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-lg text-muted-foreground hover:border-primary hover:text-primary transition-colors">
-                <PlusCircle className="h-10 w-10" />
-                <span className="font-semibold">Adicionar Novo Pet</span>
-            </Link>
+        <CardContent>
+        {pets.length > 0 ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {pets.map((pet) => (
+              <Card key={pet.id} className="overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="p-6 flex flex-col items-center text-center">
+                      <Avatar className="h-24 w-24 mb-4">
+                          <AvatarImage src={pet.avatarUrl} alt={pet.name} data-ai-hint={pet.avatarHint} />
+                          <AvatarFallback>{pet.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <h3 className="text-xl font-bold font-headline">{pet.name}</h3>
+                      <p className="text-sm text-muted-foreground">{pet.breed}</p>
+                  </div>
+                </CardContent>
+                <CardFooter className="p-0">
+                  <Button variant="ghost" className="w-full rounded-t-none" asChild><Link href={`/portal/pets/${pet.id}`}>Ver Detalhes</Link></Button>
+                </CardFooter>
+              </Card>
+            ))}
+             <Link href="/portal/pets/novo" className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-lg text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                  <PlusCircle className="h-10 w-10" />
+                  <span className="font-semibold">Adicionar Novo Pet</span>
+              </Link>
+          </div>
+        ) : (
+          <div className="text-center py-16 px-6 border-2 border-dashed rounded-lg">
+            <Dog className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-semibold">Bem-vindo ao VETCARE+!</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Cadastre seu primeiro amigo para começar a gerenciar a saúde dele.</p>
+            <Button className="mt-6" asChild>
+              <Link href="/portal/pets/novo">
+                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Pet
+              </Link>
+            </Button>
+          </div>
+        )}
         </CardContent>
       </Card>
     </div>

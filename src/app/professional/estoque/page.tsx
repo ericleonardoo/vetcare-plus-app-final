@@ -36,6 +36,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const itemSchema = z.object({
   productName: z.string().min(3, "O nome do produto é obrigatório."),
@@ -75,10 +76,10 @@ export default function InventoryPage() {
       try {
         if (editingItem) {
           await updateItem(editingItem.id, data);
-          toast({ title: "Produto Atualizado!", description: "O item do estoque foi atualizado com sucesso." });
+          toast({ title: "Produto Atualizado!", description: `O item '${data.productName}' foi atualizado.` });
         } else {
           await addItem(data);
-          toast({ title: "Produto Adicionado!", description: "O novo item foi adicionado ao estoque." });
+          toast({ title: "Produto Adicionado!", description: `O novo item '${data.productName}' foi adicionado ao estoque.` });
         }
         setIsModalOpen(false);
       } catch (error) {
@@ -118,6 +119,36 @@ export default function InventoryPage() {
     return 'Em estoque';
   };
 
+  const TableSkeleton = () => (
+    <Table>
+        <TableHeader>
+            <TableRow>
+                <TableHead><Skeleton className="h-4 w-32" /></TableHead>
+                <TableHead><Skeleton className="h-4 w-24" /></TableHead>
+                <TableHead className="text-center"><Skeleton className="h-4 w-20" /></TableHead>
+                <TableHead className="text-right"><Skeleton className="h-4 w-16" /></TableHead>
+                <TableHead className="text-right"><Skeleton className="h-4 w-24" /></TableHead>
+                <TableHead className="text-right"><Skeleton className="h-4 w-24" /></TableHead>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+            {[...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-24 mx-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                    <TableCell className="flex justify-end gap-2">
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-8 w-8" />
+                    </TableCell>
+                </TableRow>
+            ))}
+        </TableBody>
+    </Table>
+  );
+
   return (
     <>
       <header className="flex items-center justify-between">
@@ -154,56 +185,55 @@ export default function InventoryPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Produto</TableHead>
-                <TableHead>Fornecedor</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Quantidade</TableHead>
-                <TableHead className="text-right">Preço de Custo</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+          {loading ? (
+            <TableSkeleton />
+          ) : inventory.length > 0 ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
-                  </TableCell>
+                  <TableHead>Produto</TableHead>
+                  <TableHead>Fornecedor</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-right">Quantidade</TableHead>
+                  <TableHead className="text-right">Preço de Custo</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ) : inventory.length > 0 ? (
-                inventory.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.productName}</TableCell>
-                    <TableCell>{product.supplier || 'N/A'}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={getStockVariant(product.quantity)}>
-                        {getStockStatus(product.quantity)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{product.quantity}</TableCell>
-                    <TableCell className="text-right">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(product.unitCost)}
-                    </TableCell>
-                    <TableCell className="text-right flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenModal(product)}>Editar</Button>
-                      <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(product)}><Trash2 className="h-4 w-4" /></Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    Nenhum produto encontrado. Comece adicionando um novo produto.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                  {inventory.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.productName}</TableCell>
+                      <TableCell>{product.supplier || 'N/A'}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={getStockVariant(product.quantity)}>
+                          {getStockStatus(product.quantity)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">{product.quantity}</TableCell>
+                      <TableCell className="text-right">
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                        }).format(product.unitCost)}
+                      </TableCell>
+                      <TableCell className="text-right flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenModal(product)}>Editar</Button>
+                        <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(product)}><Trash2 className="h-4 w-4" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-16 px-6 border-2 border-dashed rounded-lg">
+              <Package className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">Seu estoque está vazio</h3>
+              <p className="mt-2 text-sm text-muted-foreground">Comece adicionando o seu primeiro produto para controlar o inventário.</p>
+              <Button className="mt-6" onClick={() => handleOpenModal()}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Produto
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
       
