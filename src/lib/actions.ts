@@ -1,7 +1,7 @@
 
 'use server';
 
-import { suggestAppointmentTimes } from "@/ai/flows/suggest-appointment-times";
+import { suggestAppointmentTimesFlow } from "@/ai/flows/suggest-appointment-times";
 import { chat as chatFlow } from "@/ai/flows/chat";
 import type { ChatInput, ChatOutput } from "@/ai/flows/chat";
 import { generateCarePlan as generateCarePlanFlow } from "@/ai/flows/generate-care-plan";
@@ -38,7 +38,6 @@ const portalAppointmentFormSchema = z.object({
     serviceType: z.string({ required_error: 'Por favor, selecione um serviço.' }),
     timeZone: z.string(),
     date: z.date(),
-    staffId: z.string().optional(),
 });
 type PortalAppointmentFormInput = z.infer<typeof portalAppointmentFormSchema>;
 
@@ -50,19 +49,26 @@ export async function getSuggestedTimes(data: AppointmentFormInput) {
         return { success: false, error: "Dados inválidos fornecidos." };
     }
     
-    // Na aplicação real, buscaríamos todos os veterinários ativos
-    const staffDoc = await getDoc(doc(db, "staff", "SflKAg84t3O3aFf12345")); // ID Fixo para Dra. Emily
+    const staffDoc = await getDoc(doc(db, "staff", "SflKAg84t3O3aFf12345")); 
     if(!staffDoc.exists()) {
         return { success: false, error: "Veterinário padrão não encontrado." };
     }
 
-    const staffAvailability = JSON.stringify(staffDoc.data().availability);
+    const availabilityData = staffDoc.data().availability;
+    const availabilityMap: Record<string, string[]> = {};
+    availabilityData.forEach((day: any) => {
+        if(day.isEnabled) {
+            const dayName = day.dayOfWeek.charAt(0).toUpperCase() + day.dayOfWeek.slice(1);
+            availabilityMap[dayName] = [`${day.startTime}-${day.endTime}`];
+        }
+    });
+    const staffAvailability = JSON.stringify(availabilityMap);
 
     const { serviceType, timeZone } = validatedData.data;
     const durationMinutes = serviceDurations[serviceType] || 30;
 
     try {
-        const result = await suggestAppointmentTimes({
+        const result = await suggestAppointmentTimesFlow({
             serviceType,
             staffAvailability,
             timeZone,
@@ -83,10 +89,9 @@ export async function getSuggestedTimesForPortal(data: PortalAppointmentFormInpu
         return { success: false, error: "Dados inválidos fornecidos." };
     }
 
-    const { serviceType, timeZone, date, staffId } = validatedData.data;
+    const { serviceType, timeZone, date } = validatedData.data;
 
-    // Se um staffId não for fornecido, usamos um padrão. Em um app real, o usuário selecionaria.
-    const professionalId = staffId || "SflKAg84t3O3aFf12345"; // ID Fixo para Dra. Emily
+    const professionalId = "SflKAg84t3O3aFf12345";
     
     const staffDoc = await getDoc(doc(db, "staff", professionalId));
     if (!staffDoc.exists() || !staffDoc.data().isActive) {
@@ -95,25 +100,35 @@ export async function getSuggestedTimesForPortal(data: PortalAppointmentFormInpu
     
     const availabilityData = staffDoc.data().availability;
 
-    // Convertemos o formato do Firestore para o formato JSON que a IA espera
-    const availabilityMap: Record<string, string[]> = {};
-    
+    const availabilityMap: Record<string, any> = {};
     availabilityData.forEach((day: any) => {
-        if(day.isEnabled) {
-            const dayName = day.dayOfWeek.charAt(0).toUpperCase() + day.dayOfWeek.slice(1);
-            availabilityMap[dayName] = [`${day.startTime}-${day.endTime}`];
+      if (day.isEnabled) {
+        const dayName = day.dayOfWeek.charAt(0).toUpperCase() + day.dayOfWeek.slice(1);
+        availabilityMap[dayName] = [`${day.startTime}-${day.endTime}`];
+        if (day.breaks && day.breaks.length > 0) {
+          availabilityMap[dayName].push(...day.breaks.map((b: any) => `break:${b.start}-${b.end}`));
         }
+      }
     });
 
-    const staffAvailability = JSON.stringify(availabilityMap);
-
-    const blockedTimes = [
-      addDays(date, 0).toISOString().split('T')[0] + 'T10:00:00',
-      addDays(date, 0).toISOString().split('T')[0] + 'T14:30:00',
-    ];
+    const blockedTimes: string[] = [];
+    const appointmentsSnapshot = await getDoc(doc(db, "appointments"));
+    if (appointmentsSnapshot.exists()) {
+        const appointmentsData = appointmentsSnapshot.data();
+        Object.values(appointmentsData).forEach((apt: any) => {
+            const aptDate = new Date(apt.date);
+            if (
+                aptDate.getFullYear() === date.getFullYear() &&
+                aptDate.getMonth() === date.getMonth() &&
+                aptDate.getDate() === date.getDate()
+            ) {
+                blockedTimes.push(apt.date);
+            }
+        });
+    }
 
     const availabilityWithBlockedTimes = {
-      ...JSON.parse(staffAvailability),
+      ...availabilityMap,
       blocked: blockedTimes,
       dateRange: {
         start: date.toISOString(),
@@ -124,7 +139,7 @@ export async function getSuggestedTimesForPortal(data: PortalAppointmentFormInpu
     const durationMinutes = serviceDurations[serviceType] || 30;
 
     try {
-        const result = await suggestAppointmentTimes({
+        const result = await suggestAppointmentTimesFlow({
             serviceType,
             staffAvailability: JSON.stringify(availabilityWithBlockedTimes),
             timeZone,
@@ -190,7 +205,7 @@ export async function getNotifications() {
     return { success: true, data: await getNotificationsTool() };
 }
 
-export async function clearNotifications() {
+export async function clearAllNotifications() {
     await clearNotificationsTool();
     return { success: true };
 }
