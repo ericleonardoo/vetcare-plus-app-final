@@ -40,6 +40,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useInventory } from '@/context/InventoryContext';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 
 const newHistoryEntrySchema = z.object({
@@ -52,6 +54,7 @@ type NewHistoryEntryValues = z.infer<typeof newHistoryEntrySchema>;
 
 const newInvoiceSchema = z.object({
     items: z.array(z.object({
+        inventoryId: z.string().optional(),
         description: z.string().min(1, 'A descrição não pode estar vazia.'),
         quantity: z.coerce.number().min(1, 'A quantidade deve ser no mínimo 1.'),
         unitPrice: z.coerce.number().min(0, 'O preço deve ser positivo.'),
@@ -89,6 +92,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
   const { pets, addHealthHistoryEntry, addVaccineHistoryEntry, updatePet, loading: petsLoading } = usePets();
   const { tutors, loading: tutorsLoading } = useTutors();
   const { addInvoice } = useInvoices();
+  const { inventory, loading: inventoryLoading } = useInventory();
 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
@@ -112,10 +116,10 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
   const invoiceForm = useForm<NewInvoiceValues>({
       resolver: zodResolver(newInvoiceSchema),
       defaultValues: {
-          items: [{ description: '', quantity: 1, unitPrice: 0 }],
+          items: [{ description: '', quantity: 1, unitPrice: 0, inventoryId: '' }],
       },
   });
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
       control: invoiceForm.control,
       name: "items",
   });
@@ -221,7 +225,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                   clientId: tutor.id,
                   petId: pet.id,
                   petName: pet.name,
-                  items: data.items,
+                  items: data.items.map(i => ({...i, inventoryId: i.inventoryId || undefined })), // Garante que o campo opcional seja undefined
                   status: status
               });
               toast({
@@ -230,9 +234,9 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
               });
               invoiceForm.reset({ items: [{ description: '', quantity: 1, unitPrice: 0 }] });
               setIsInvoiceModalOpen(false);
-          } catch(error) {
+          } catch(error: any) {
               console.error("Erro ao gerar fatura:", error);
-              toast({variant: 'destructive', title: 'Erro', description: 'Não foi possível gerar a fatura.'})
+              toast({variant: 'destructive', title: 'Erro ao Gerar Fatura', description: error.message || 'Não foi possível gerar a fatura.'})
           }
       });
   }
@@ -411,25 +415,53 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                                   </DialogHeader>
                                   <Form {...invoiceForm}>
                                       <form className="space-y-4 py-4">
-                                          <div className="space-y-2">
-                                              {fields.map((field, index) => (
-                                                  <div key={field.id} className="grid grid-cols-[1fr_80px_100px_auto] gap-2 items-center">
-                                                      <FormField control={invoiceForm.control} name={`items.${index}.description`} render={({ field }) => (
-                                                          <Input placeholder="Ex: Consulta, Vacina V10..." {...field} />
-                                                      )} />
-                                                      <FormField control={invoiceForm.control} name={`items.${index}.quantity`} render={({ field }) => (
-                                                          <Input type="number" placeholder="Qtd" {...field} />
-                                                      )} />
-                                                      <FormField control={invoiceForm.control} name={`items.${index}.unitPrice`} render={({ field }) => (
-                                                          <Input type="number" placeholder="Preço Un." {...field} />
-                                                      )} />
-                                                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                                                          <Trash2 className="h-4 w-4 text-destructive" />
-                                                      </Button>
-                                                  </div>
-                                              ))}
-                                          </div>
-                                          <Button type="button" variant="outline" size="sm" onClick={() => append({ description: '', quantity: 1, unitPrice: 0 })}>
+                                        <div className='space-y-2'>
+                                            {fields.map((field, index) => (
+                                                <div key={field.id} className="grid grid-cols-[1fr_80px_100px_auto] gap-2 items-start">
+                                                    <FormField
+                                                        control={invoiceForm.control}
+                                                        name={`items.${index}.description`}
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <Popover>
+                                                                    <PopoverTrigger asChild>
+                                                                        <FormControl>
+                                                                            <Input placeholder="Selecione ou digite um item..." {...field} />
+                                                                        </FormControl>
+                                                                    </PopoverTrigger>
+                                                                    <PopoverContent className="w-[300px] p-0">
+                                                                        <Command>
+                                                                            <CommandInput placeholder="Buscar produto ou serviço..." className="h-9" />
+                                                                            <CommandList>
+                                                                                <CommandEmpty>Nenhum item encontrado.</CommandEmpty>
+                                                                                <CommandGroup heading="Serviços">
+                                                                                    <CommandItem onSelect={() => update(index, { ...field, description: 'Consulta', unitPrice: 150, inventoryId: '' })}>Consulta</CommandItem>
+                                                                                    <CommandItem onSelect={() => update(index, { ...field, description: 'Vacina V10', unitPrice: 80, inventoryId: '' })}>Vacina V10</CommandItem>
+                                                                                </CommandGroup>
+                                                                                <CommandGroup heading="Produtos do Estoque">
+                                                                                    {inventory.map(item => (
+                                                                                        <CommandItem key={item.id} onSelect={() => update(index, { ...field, inventoryId: item.id, description: item.productName, unitPrice: item.unitCost * 1.5 /* Margem de 50% */ })}>
+                                                                                            {item.productName} ({item.quantity} disp.)
+                                                                                        </CommandItem>
+                                                                                    ))}
+                                                                                </CommandGroup>
+                                                                            </CommandList>
+                                                                        </Command>
+                                                                    </PopoverContent>
+                                                                </Popover>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                     <FormField control={invoiceForm.control} name={`items.${index}.quantity`} render={({ field }) => (<FormItem><FormControl><Input type="number" placeholder="Qtd" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                                     <FormField control={invoiceForm.control} name={`items.${index}.unitPrice`} render={({ field }) => (<FormItem><FormControl><Input type="number" step="0.01" placeholder="Preço" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                          <Button type="button" variant="outline" size="sm" onClick={() => append({ description: '', quantity: 1, unitPrice: 0, inventoryId: '' })}>
                                               <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
                                           </Button>
 
@@ -694,5 +726,3 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
     </div>
   );
 }
-
-    

@@ -23,22 +23,24 @@ import { usePets } from "@/context/PetsContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Clock, PawPrint, PhoneForwarded, Loader2, Users, DollarSign, FileWarning } from "lucide-react";
+import { ArrowUpRight, Clock, PawPrint, PhoneForwarded, Loader2, Users, DollarSign, FileWarning, Package, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/context/NotificationsContext";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
-import { useTutor } from "@/context/TutorContext";
+import { useTutors } from "@/context/TutorsContext";
 import { startOfWeek, eachDayOfInterval, format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useInvoices } from "@/context/InvoicesContext";
+import { useInventory } from "@/context/InventoryContext";
 
 
 export default function ProfessionalDashboard() {
   const { appointments, loading: appointmentsLoading } = useAppointments();
   const { pets, loading: petsLoading } = usePets();
   const { notifications, clearNotifications } = useNotifications();
-  const { tutor, loading: tutorLoading } = useTutor();
+  const { tutors, loading: tutorsLoading } = useTutors();
   const { invoices, loading: invoicesLoading } = useInvoices();
+  const { inventory, loading: inventoryLoading } = useInventory();
 
 
   const today = new Date();
@@ -104,8 +106,12 @@ export default function ProfessionalDashboard() {
     return data;
   }, [appointments, today]);
 
+  const lowStockItems = useMemo(() => 
+    inventory.filter(item => item.quantity <= 5).slice(0, 5), 
+  [inventory]);
 
-  const isLoading = appointmentsLoading || petsLoading || tutorLoading || invoicesLoading;
+
+  const isLoading = appointmentsLoading || petsLoading || tutorsLoading || invoicesLoading || inventoryLoading;
 
 
   return (
@@ -206,6 +212,7 @@ export default function ProfessionalDashboard() {
                 {upcomingAppointments.length > 0 ? (
                   upcomingAppointments.map((apt) => {
                     const pet = pets.find((p) => p.id === apt.petId);
+                    const tutor = tutors.find(t => t.id === pet?.tutorId);
                     return (
                       <TableRow key={apt.id}>
                           <TableCell className="font-semibold">
@@ -279,44 +286,88 @@ export default function ProfessionalDashboard() {
         </CardContent>
       </Card>
     </div>
-    <Card>
-        <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-                <PhoneForwarded /> Atendimentos Pendentes do Chatbot
-            </CardTitle>
-            <CardDescription>
-                Usuários que solicitaram contato de um atendente através do chatbot.
-            </CardDescription>
-        </CardHeader>
-        <CardContent>
-            {notifications.length > 0 ? (
-                <ul className="space-y-4">
-                    {notifications.map(notif => (
-                        <li key={notif.id} className="p-3 bg-secondary rounded-lg">
-                            <h4 className="font-semibold">{notif.userName} - {notif.userContact}</h4>
-                            <p className="text-sm text-muted-foreground mt-1">"{notif.reason}"</p>
-                             <div className="text-xs text-muted-foreground/80 mt-2 text-right">
-                                {new Date(notif.timestamp).toLocaleString('pt-BR')}
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            ) : (
-                <div className="text-center text-muted-foreground p-8">
-                    <p>Nenhuma solicitação de atendimento pendente.</p>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="lg:col-span-3">
+            <CardHeader className="flex flex-row items-center">
+                <div className="grid gap-2">
+                    <CardTitle className="flex items-center gap-2"><AlertCircle className="text-destructive" /> Itens com Estoque Baixo</CardTitle>
+                    <CardDescription>
+                    Produtos que precisam de reposição urgente.
+                    </CardDescription>
                 </div>
-            )}
-        </CardContent>
-        {notifications.length > 0 && (
-             <CardFooter>
-                <Button variant="outline" className="w-full" onClick={clearNotifications}>
-                    Marcar todos como resolvidos
+                <Button asChild size="sm" className="ml-auto gap-1">
+                    <Link href="/professional/estoque">
+                    Ver Estoque
+                    <ArrowUpRight className="h-4 w-4" />
+                    </Link>
                 </Button>
-            </CardFooter>
-        )}
-      </Card>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? (
+                    <div className="flex justify-center items-center h-48"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead>Produto</TableHead>
+                            <TableHead className="text-right">Quantidade Restante</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {lowStockItems.length > 0 ? (
+                                lowStockItems.map((item) => (
+                                    <TableRow key={item.id}>
+                                        <TableCell className="font-medium">{item.productName}</TableCell>
+                                        <TableCell className="text-right font-bold text-destructive">{item.quantity}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={2} className="text-center h-24">Nenhum item com estoque baixo.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+        </Card>
+        <Card className="lg:col-span-4">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <PhoneForwarded /> Atendimentos Pendentes do Chatbot
+                </CardTitle>
+                <CardDescription>
+                    Usuários que solicitaram contato de um atendente através do chatbot.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                {notifications.length > 0 ? (
+                    <ul className="space-y-4">
+                        {notifications.map(notif => (
+                            <li key={notif.id} className="p-3 bg-secondary rounded-lg">
+                                <h4 className="font-semibold">{notif.userName} - {notif.userContact}</h4>
+                                <p className="text-sm text-muted-foreground mt-1">"{notif.reason}"</p>
+                                <div className="text-xs text-muted-foreground/80 mt-2 text-right">
+                                    {new Date(notif.timestamp).toLocaleString('pt-BR')}
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <div className="text-center text-muted-foreground p-8">
+                        <p>Nenhuma solicitação de atendimento pendente.</p>
+                    </div>
+                )}
+            </CardContent>
+            {notifications.length > 0 && (
+                <CardFooter>
+                    <Button variant="outline" className="w-full" onClick={clearNotifications}>
+                        Marcar todos como resolvidos
+                    </Button>
+                </CardFooter>
+            )}
+        </Card>
+    </div>
     </>
   );
 }
-
-    

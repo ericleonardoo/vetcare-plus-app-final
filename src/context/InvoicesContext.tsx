@@ -5,10 +5,12 @@ import React, { createContext, useState, useContext, ReactNode, useEffect, useCa
 import { useAuth } from './AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, onSnapshot, Unsubscribe, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { useInventory } from './InventoryContext';
 
 export type InvoiceStatus = 'Pendente' | 'Pago' | 'Atrasado';
 
 export type InvoiceItem = {
+    inventoryId?: string; // ID do item no inventário, se aplicável
     description: string;
     quantity: number;
     unitPrice: number;
@@ -40,6 +42,7 @@ const InvoicesContext = createContext<InvoicesContextType | undefined>(undefined
 
 export const InvoicesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
+  const { updateStock } = useInventory();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -102,12 +105,29 @@ export const InvoicesProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
 
     await addDoc(collection(db, "invoices"), newInvoiceData);
+
+    // Se a fatura for registrada como paga, deduz o estoque
+    if (newInvoiceData.status === 'Pago') {
+        const itemsToUpdate = newInvoiceData.items
+            .filter(item => item.inventoryId)
+            .map(item => ({ id: item.inventoryId!, quantity: item.quantity }));
+        
+        if (itemsToUpdate.length > 0) {
+            await updateStock(itemsToUpdate);
+        }
+    }
   };
 
   const updateInvoiceStatus = async (id: string, status: InvoiceStatus) => {
     if (!user || !user.email?.includes('vet')) throw new Error("Apenas profissionais podem alterar o status.");
 
     const invoiceRef = doc(db, 'invoices', id);
+    const invoiceToUpdate = invoices.find(inv => inv.id === id);
+    
+    if (!invoiceToUpdate) {
+        throw new Error("Fatura não encontrada.");
+    }
+    
     const updateData: { status: InvoiceStatus; paidAt?: Timestamp } = { status };
 
     if (status === 'Pago') {
@@ -115,6 +135,17 @@ export const InvoicesProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
 
     await updateDoc(invoiceRef, updateData);
+
+    // Se o status mudou para PAGO, deduz o estoque
+    if (status === 'Pago' && invoiceToUpdate.status !== 'Pago') {
+         const itemsToUpdate = invoiceToUpdate.items
+            .filter(item => item.inventoryId)
+            .map(item => ({ id: item.inventoryId!, quantity: item.quantity }));
+        
+        if (itemsToUpdate.length > 0) {
+            await updateStock(itemsToUpdate);
+        }
+    }
   };
 
 

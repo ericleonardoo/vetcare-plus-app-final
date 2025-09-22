@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { File, ListFilter, Loader2, Package, PlusCircle } from 'lucide-react';
+import { File, ListFilter, Loader2, Package, PlusCircle, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -26,10 +26,85 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useInventory, InventoryItem } from '@/context/InventoryContext';
+import { useState, useTransition } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
+const itemSchema = z.object({
+  productName: z.string().min(3, "O nome do produto é obrigatório."),
+  description: z.string().optional(),
+  quantity: z.coerce.number().min(0, "A quantidade não pode ser negativa."),
+  unitCost: z.coerce.number().min(0, "O custo deve ser positivo."),
+  supplier: z.string().optional(),
+});
+type ItemFormValues = z.infer<typeof itemSchema>;
+
 
 export default function InventoryPage() {
-  const isLoading = true; // Placeholder
-  const inventory = [] as any[]; // Placeholder
+  const { inventory, loading, addItem, updateItem, deleteItem } = useInventory();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, startSubmitting] = useTransition();
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const { toast } = useToast();
+
+  const form = useForm<ItemFormValues>({
+    resolver: zodResolver(itemSchema),
+  });
+
+  const handleOpenModal = (item: InventoryItem | null = null) => {
+    setEditingItem(item);
+    if (item) {
+      form.reset(item);
+    } else {
+      form.reset({ productName: '', description: '', quantity: 0, unitCost: 0, supplier: '' });
+    }
+    setIsModalOpen(true);
+  }
+
+  const onSubmit = (data: ItemFormValues) => {
+    startSubmitting(async () => {
+      try {
+        if (editingItem) {
+          await updateItem(editingItem.id, data);
+          toast({ title: "Produto Atualizado!", description: "O item do estoque foi atualizado com sucesso." });
+        } else {
+          await addItem(data);
+          toast({ title: "Produto Adicionado!", description: "O novo item foi adicionado ao estoque." });
+        }
+        setIsModalOpen(false);
+      } catch (error) {
+        toast({ variant: 'destructive', title: "Erro", description: "Não foi possível salvar o produto." });
+      }
+    });
+  }
+  
+  const handleDeleteConfirm = () => {
+    if (!itemToDelete) return;
+    startSubmitting(async () => {
+      try {
+        await deleteItem(itemToDelete.id);
+        toast({ title: "Produto Removido!", description: `${itemToDelete.productName} foi removido do estoque.` });
+        setIsDeleteAlertOpen(false);
+        setItemToDelete(null);
+      } catch(error) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover o produto.' });
+      }
+    });
+  }
+
+  const openDeleteDialog = (item: InventoryItem) => {
+    setItemToDelete(item);
+    setIsDeleteAlertOpen(true);
+  }
 
   const getStockVariant = (quantity: number) => {
     if (quantity === 0) return 'destructive';
@@ -62,7 +137,7 @@ export default function InventoryPage() {
               Exportar
             </span>
           </Button>
-          <Button size="sm" className="h-8 gap-1">
+          <Button size="sm" className="h-8 gap-1" onClick={() => handleOpenModal()}>
             <PlusCircle className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
               Adicionar Produto
@@ -91,7 +166,7 @@ export default function InventoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {loading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
@@ -114,8 +189,9 @@ export default function InventoryPage() {
                         currency: 'BRL',
                       }).format(product.unitCost)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm">Editar</Button>
+                    <TableCell className="text-right flex justify-end gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleOpenModal(product)}>Editar</Button>
+                      <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(product)}><Trash2 className="h-4 w-4" /></Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -130,6 +206,74 @@ export default function InventoryPage() {
           </Table>
         </CardContent>
       </Card>
+      
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingItem ? 'Editar Produto' : 'Adicionar Novo Produto'}</DialogTitle>
+            <DialogDescription>Preencha os detalhes do produto para o inventário.</DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4 py-4'>
+              <FormField control={form.control} name="productName" render={({field}) => (
+                <FormItem>
+                  <FormLabel>Nome do Produto</FormLabel>
+                  <FormControl><Input placeholder='Ex: Ração Super Premium' {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <div className='grid grid-cols-2 gap-4'>
+                <FormField control={form.control} name="quantity" render={({field}) => (
+                  <FormItem>
+                    <FormLabel>Quantidade</FormLabel>
+                    <FormControl><Input type="number" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="unitCost" render={({field}) => (
+                  <FormItem>
+                    <FormLabel>Custo Unitário (R$)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="supplier" render={({field}) => (
+                <FormItem>
+                  <FormLabel>Fornecedor</FormLabel>
+                  <FormControl><Input placeholder='Nome do fornecedor' {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <DialogFooter>
+                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button></DialogClose>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar Produto
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      Esta ação não pode ser desfeita. Isso removerá permanentemente o produto <span className='font-bold'>{itemToDelete?.productName}</span> do seu inventário.
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isSubmitting}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isSubmitting}>
+                      {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Sim, remover produto
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
