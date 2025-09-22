@@ -6,7 +6,7 @@ import { chat as chatFlow, ChatInput, ChatOutput } from "@/ai/flows/chat";
 import { generateCarePlan as generateCarePlanFlow, GenerateCarePlanInput, GenerateCarePlanOutput } from "@/ai/flows/generate-care-plan";
 import { scheduleHumanFollowUpFlow } from '@/ai/tools/clinic-tools';
 import { z } from "zod";
-import { addDays } from "date-fns";
+import { addDays, format, set } from "date-fns";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { revalidatePath } from "next/cache";
@@ -22,16 +22,6 @@ const appointmentFormSchema = z.object({
 
 type AppointmentFormInput = z.infer<typeof appointmentFormSchema>;
 
-// Em uma aplicação real, isso viria de um banco de dados.
-const staffAvailability = JSON.stringify({
-  "Segunda-feira": ["09:00-12:00", "14:00-17:00"],
-  "Terça-feira": ["09:00-17:00"],
-  "Quarta-feira": ["09:00-12:00"],
-  "Quinta-feira": ["09:00-17:00"],
-  "Sexta-feira": ["09:00-15:00"],
-  "Sábado": ["10:00-14:00"],
-  "Domingo": []
-});
 
 const serviceDurations: Record<string, number> = {
     'Check-up de Rotina': 30,
@@ -46,6 +36,7 @@ const portalAppointmentFormSchema = z.object({
     serviceType: z.string({ required_error: 'Por favor, selecione um serviço.' }),
     timeZone: z.string(),
     date: z.date(),
+    staffId: z.string().optional(),
 });
 type PortalAppointmentFormInput = z.infer<typeof portalAppointmentFormSchema>;
 
@@ -56,6 +47,14 @@ export async function getSuggestedTimes(data: AppointmentFormInput) {
     if (!validatedData.success) {
         return { success: false, error: "Dados inválidos fornecidos." };
     }
+    
+    // Na aplicação real, buscaríamos todos os veterinários ativos
+    const staffDoc = await getDoc(doc(db, "staff", "SflKAg84t3O3aFf12345")); // ID Fixo para Dra. Emily
+    if(!staffDoc.exists()) {
+        return { success: false, error: "Veterinário padrão não encontrado." };
+    }
+
+    const staffAvailability = JSON.stringify(staffDoc.data().availability);
 
     const { serviceType, timeZone } = validatedData.data;
     const durationMinutes = serviceDurations[serviceType] || 30;
@@ -82,7 +81,30 @@ export async function getSuggestedTimesForPortal(data: PortalAppointmentFormInpu
         return { success: false, error: "Dados inválidos fornecidos." };
     }
 
-    const { serviceType, timeZone, date } = validatedData.data;
+    const { serviceType, timeZone, date, staffId } = validatedData.data;
+
+    // Se um staffId não for fornecido, usamos um padrão. Em um app real, o usuário selecionaria.
+    const professionalId = staffId || "SflKAg84t3O3aFf12345"; // ID Fixo para Dra. Emily
+    
+    const staffDoc = await getDoc(doc(db, "staff", professionalId));
+    if (!staffDoc.exists() || !staffDoc.data().isActive) {
+      return { success: false, error: "Veterinário não encontrado ou inativo." };
+    }
+    
+    const availabilityData = staffDoc.data().availability;
+
+    // Convertemos o formato do Firestore para o formato JSON que a IA espera
+    const availabilityMap: Record<string, string[]> = {};
+    const dayMapping = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    
+    availabilityData.forEach((day: any) => {
+        if(day.isEnabled) {
+            const dayName = day.dayOfWeek.charAt(0).toUpperCase() + day.dayOfWeek.slice(1);
+            availabilityMap[dayName] = [`${day.startTime}-${day.endTime}`];
+        }
+    });
+
+    const staffAvailability = JSON.stringify(availabilityMap);
 
     const blockedTimes = [
       addDays(date, 0).toISOString().split('T')[0] + 'T10:00:00',

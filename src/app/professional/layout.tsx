@@ -11,6 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { InvoicesProvider } from '@/context/InvoicesContext';
 import { InventoryProvider } from '@/context/InventoryContext';
+import { StaffProvider } from '@/context/StaffContext';
 
 export default function ProfessionalLayout({
   children,
@@ -37,6 +38,7 @@ export default function ProfessionalLayout({
           <NotificationsProvider>
              <InventoryProvider>
                 <InvoicesProvider>
+                  <StaffProvider>
                     <div className="flex min-h-screen w-full bg-muted/40">
                     <ProfessionalSidebar />
                     <div className="flex flex-1 flex-col">
@@ -46,6 +48,7 @@ export default function ProfessionalLayout({
                         </main>
                     </div>
                     </div>
+                  </StaffProvider>
                 </InvoicesProvider>
             </InventoryProvider>
           </NotificationsProvider>

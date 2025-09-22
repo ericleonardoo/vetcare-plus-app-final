@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
@@ -21,7 +22,7 @@ export type Appointment = {
 
 type AppointmentsContextType = {
   appointments: Appointment[];
-  addAppointment: (appointment: Omit<Appointment, 'id' | 'tutorId'>, vet?: string) => Promise<void>;
+  addAppointment: (appointment: Omit<Appointment, 'id' | 'tutorId' | 'vet'>, vet?: string) => Promise<void>;
   loading: boolean;
 };
 
@@ -32,7 +33,6 @@ export const AppointmentsProvider: React.FC<{ children: ReactNode }> = ({ childr
   const { user, loading: authLoading } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [vets] = useState(['Dra. Emily Carter', 'Dr. Ben Jacobs']);
 
   useEffect(() => {
     if (authLoading) {
@@ -48,7 +48,7 @@ export const AppointmentsProvider: React.FC<{ children: ReactNode }> = ({ childr
         const appointmentsCollection = collection(db, 'appointments');
         let q;
 
-        if (user.email?.includes('vet')) {
+        if (user.email?.includes('+vet')) {
             // Profissional pode ver todos os agendamentos
             q = query(appointmentsCollection);
         } else {
@@ -83,13 +83,25 @@ export const AppointmentsProvider: React.FC<{ children: ReactNode }> = ({ childr
   }, [user, authLoading]);
 
 
-  const addAppointment = async (appointmentData: Omit<Appointment, 'id'|'tutorId'>, vet?: string) => {
+  const addAppointment = async (appointmentData: Omit<Appointment, 'id'|'tutorId'| 'vet'>, vet?: string) => {
     if (!user) throw new Error("Usuário não autenticado.");
+
+    // Se nenhum veterinário for especificado, busca um aleatoriamente no BD.
+    let assignedVet = vet;
+    if (!assignedVet) {
+      const staffSnapshot = await getDocs(query(collection(db, "staff"), where("isActive", "==", true)));
+      const activeStaff = staffSnapshot.docs.map(doc => doc.data().name);
+      if (activeStaff.length > 0) {
+        assignedVet = activeStaff[Math.floor(Math.random() * activeStaff.length)];
+      } else {
+        assignedVet = "Veterinário a definir";
+      }
+    }
 
     const newAppointmentData = {
       ...appointmentData,
       tutorId: user.uid,
-      vet: vet || vets[Math.floor(Math.random() * vets.length)],
+      vet: assignedVet,
     };
 
     await addDoc(collection(db, "appointments"), newAppointmentData);

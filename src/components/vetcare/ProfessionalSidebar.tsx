@@ -13,7 +13,8 @@ import {
   Search,
   Wallet,
   Package,
-  LineChart
+  LineChart,
+  ClipboardUser,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
@@ -29,6 +30,7 @@ const navLinks = [
     { href: "/professional/dashboard", icon: Home, label: "Dashboard" },
     { href: "/professional/agenda", icon: Calendar, label: "Agenda" },
     { href: "/professional/pacientes", icon: Users, label: "Pacientes" },
+    { href: "/professional/equipe", icon: ClipboardUser, label: "Equipe" },
     { href: "/professional/financeiro", icon: Wallet, label: "Financeiro" },
     { href: "/professional/estoque", icon: Package, label: "Estoque" },
     { href: "/professional/relatorios", icon: LineChart, label: "Relatórios" },
