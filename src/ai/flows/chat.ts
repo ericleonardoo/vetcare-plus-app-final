@@ -12,6 +12,9 @@ import { ai } from '@/ai/genkit';
 import { scheduleHumanFollowUp } from '@/ai/tools/clinic-tools';
 import { z } from 'genkit';
 import { Message, Part, ToolRequestPart, renderToolResponse, toolRequest, } from 'genkit';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
 
 const MessageSchema = z.object({
   role: z.enum(['user', 'model']),
@@ -20,6 +23,7 @@ const MessageSchema = z.object({
 
 const ChatInputSchema = z.object({
   history: z.array(MessageSchema),
+  userId: z.string().optional().describe("ID do usuário logado para buscar o nome e contato."),
 });
 export type ChatInput = z.infer<typeof ChatInputSchema>;
 
@@ -32,12 +36,20 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
 
 const prompt = ai.definePrompt({
   name: 'chatPrompt',
-  input: { schema: z.object({ history: z.array(z.any()) }) },
+  input: { schema: z.object({ 
+      history: z.array(z.any()),
+      userName: z.string().optional(),
+      userContact: z.string().optional(),
+   }) },
   output: { format: 'text' },
   tools: [scheduleHumanFollowUp],
   prompt: `Você é "Dr. Gato", um assistente de IA amigável e prestativo da clínica veterinária VetCare+.
 Seu trabalho é responder a perguntas sobre a clínica, seus serviços, agendamentos e fornecer conselhos gerais sobre cuidados com animais de estimação.
 Seja sempre educado, empático e profissional.
+
+{{#if userName}}
+O usuário com quem você está conversando se chama {{userName}}. Use o nome dele para personalizar a conversa.
+{{/if}}
 
 Use as informações da clínica, se necessário:
 - Nome da Clínica: VetCare+
@@ -48,7 +60,8 @@ Use as informações da clínica, se necessário:
 - Serviços: Check-ups, vacinação, cuidado dental, cirurgias, banho e tosa, atendimento de emergência (durante o horário de funcionamento).
 
 **Instruções para Ferramentas:**
-- Se o usuário estiver descrevendo uma emergência médica clara e grave, ou parecer muito frustrado e pedindo para falar com uma pessoa, use a ferramenta \`scheduleHumanFollowUp\` para notificar um membro da equipe.
+- Se o usuário estiver descrevendo uma emergência médica clara e grave, ou parecer muito frustrado e pedindo para falar com uma pessoa, use a ferramenta \`scheduleHumanFollowUp\`.
+- Ao usar a ferramenta, passe as informações do usuário que foram fornecidas a você: {{userName}} e {{userContact}}.
 - Ao usar a ferramenta, informe ao usuário que um membro da equipe entrará em contato em breve.
 
 Converse com o usuário.
@@ -67,6 +80,20 @@ const chatFlow = ai.defineFlow(
     outputSchema: ChatOutputSchema,
   },
   async (input) => {
+
+    let userName: string | undefined = undefined;
+    let userContact: string | undefined = undefined;
+
+    // Busca os dados do usuário se um ID for fornecido
+    if (input.userId) {
+        const userDoc = await getDoc(doc(db, 'tutors', input.userId));
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            userName = data.name;
+            userContact = data.email || data.phone;
+        }
+    }
+
     const messages: Message[] = input.history.map(
       (message) =>
         new Message({
@@ -76,7 +103,7 @@ const chatFlow = ai.defineFlow(
     );
 
     while (true) {
-      const response = await prompt({ history: messages });
+      const response = await prompt({ history: messages, userName, userContact });
       const choice = response.choices[0];
 
       if (!choice) {

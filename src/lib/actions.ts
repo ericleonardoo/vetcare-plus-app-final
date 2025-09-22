@@ -1,4 +1,3 @@
-
 'use server';
 
 import { suggestAppointmentTimes } from "@/ai/flows/suggest-appointment-times";

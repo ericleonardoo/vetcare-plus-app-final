@@ -23,6 +23,8 @@ import {
   User,
 } from 'lucide-react';
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { useAuth } from '@/context/AuthContext';
+
 
 type Message = {
   role: 'user' | 'model';
@@ -36,6 +38,7 @@ export default function Chatbot() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const scrollAreaViewportRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
   
   const chatbotAvatar = PlaceHolderImages.find((img) => img.id === 'chatbot-avatar');
 
@@ -75,7 +78,7 @@ export default function Chatbot() {
 
     startTransition(async () => {
       try {
-        const response = await chat({ history: newMessages });
+        const response = await chat({ history: newMessages, userId: user?.uid });
         setMessages((prev) => [...prev, { role: 'model', content: response }]);
       } catch (error) {
         toast({
