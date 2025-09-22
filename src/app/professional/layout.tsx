@@ -17,14 +17,15 @@ export default function ProfessionalLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-   const { user, loading: authLoading } = useAuth();
+   const { user, isProfessional, loading: authLoading } = useAuth();
    const router = useRouter();
 
    if (authLoading) {
     return null;
   }
 
-  if (!user || !user.email?.includes('vet')) {
+  // Redireciona se não for um profissional, garantindo a segurança da rota.
+  if (!isProfessional) {
     router.push('/login');
     return null;
   }
@@ -53,5 +54,3 @@ export default function ProfessionalLayout({
     </TutorsProvider>
   );
 }
-
-    

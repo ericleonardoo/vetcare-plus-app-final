@@ -3,14 +3,16 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => Promise<void>;
+  isProfessional: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,12 +20,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isProfessional, setIsProfessional] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+      if (user) {
+        // Se houver um usuário, verifique sua role no Firestore
+        const userDocRef = doc(db, 'tutors', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists() && userDoc.data().role === 'professional') {
+          setIsProfessional(true);
+        } else {
+          setIsProfessional(false);
+        }
+      } else {
+        setIsProfessional(false);
+      }
       setLoading(false);
     });
 
@@ -34,25 +49,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (loading) return;
 
     const isAuthPage = pathname === '/login' || pathname === '/cadastro';
-    const isProtectedRoute = pathname.startsWith('/portal') || pathname.startsWith('/professional');
+    const isProfessionalRoute = pathname.startsWith('/professional');
+    const isCustomerRoute = pathname.startsWith('/portal');
 
-    if (!user && isProtectedRoute) {
+    if (!user && (isProfessionalRoute || isCustomerRoute)) {
       router.push('/login');
     }
     
-    if (user && isAuthPage) {
-        if (user.email?.includes('vet')) {
-             router.push('/professional/dashboard');
-        } else {
-            router.push('/portal/dashboard');
-        }
+    if (user) {
+      if (isAuthPage) {
+        // Se o usuário está logado e em uma página de autenticação, redirecione-o
+        router.push(isProfessional ? '/professional/dashboard' : '/portal/dashboard');
+      } else if (isProfessional && !isProfessionalRoute) {
+        // Se é um profissional fora da rota de profissional, redirecione-o
+        if (!isCustomerRoute) router.push('/professional/dashboard'); // Evita loop em páginas públicas
+      } else if (!isProfessional && isProfessionalRoute) {
+        // Se não é um profissional tentando acessar a rota de profissional, bloqueie
+        router.push('/portal/dashboard');
+      }
     }
 
-  }, [user, loading, pathname, router]);
+  }, [user, isProfessional, loading, pathname, router]);
 
   const logout = async () => {
     await signOut(auth);
-    // O onAuthStateChanged vai detectar a mudança e o useEffect acima cuidará do redirecionamento.
+    setIsProfessional(false);
+    router.push('/login'); // Redireciona explicitamente para garantir
   };
 
 
@@ -67,7 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     )
   }
 
-  return <AuthContext.Provider value={{ user, loading, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, logout, isProfessional }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

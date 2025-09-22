@@ -61,8 +61,8 @@ export default function CadastroPage() {
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     
-    // Hack temporário para diferenciar profissionais
-    const finalEmail = data.isProfessional ? data.email.replace('@', '+vet@') : data.email;
+    // O e-mail de autenticação permanece o mesmo. A diferenciação de papel será feita no Firestore.
+    const finalEmail = data.email;
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, finalEmail, data.password);
@@ -71,12 +71,12 @@ export default function CadastroPage() {
       // Atualiza o perfil do Firebase Auth com o nome
       await updateProfile(user, { displayName: data.name });
 
-      // Cria o documento do tutor no Firestore
+      // Cria o documento do usuário (tutor/professional) no Firestore com a role correta
       await setDoc(doc(db, "tutors", user.uid), {
         name: data.name,
-        email: finalEmail, // Salva o email final (com +vet se for o caso)
+        email: finalEmail,
         phone: data.phone,
-        isProfessional: data.isProfessional, // Salva a role
+        role: data.isProfessional ? 'professional' : 'customer', // Salva a role
       });
 
       toast({
