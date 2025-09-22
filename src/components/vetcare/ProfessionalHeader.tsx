@@ -11,7 +11,9 @@ import {
   LogOut,
   Bell,
   Search,
-  Wallet
+  Wallet,
+  Package,
+  LineChart
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -38,6 +40,8 @@ export default function ProfessionalHeader() {
     { href: '/professional/agenda', icon: Calendar, label: 'Agenda' },
     { href: '/professional/pacientes', icon: Users, label: 'Pacientes' },
     { href: '/professional/financeiro', icon: Wallet, label: 'Financeiro' },
+    { href: '/professional/estoque', icon: Package, label: 'Estoque' },
+    { href: '/professional/relatorios', icon: LineChart, label: 'Relatórios' },
   ];
 
   return (

@@ -11,7 +11,9 @@ import {
   PawPrint,
   Settings,
   Search,
-  Wallet
+  Wallet,
+  Package,
+  LineChart
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
@@ -28,6 +30,8 @@ const navLinks = [
     { href: "/professional/agenda", icon: Calendar, label: "Agenda" },
     { href: "/professional/pacientes", icon: Users, label: "Pacientes" },
     { href: "/professional/financeiro", icon: Wallet, label: "Financeiro" },
+    { href: "/professional/estoque", icon: Package, label: "Estoque" },
+    { href: "/professional/relatorios", icon: LineChart, label: "Relatórios" },
 ]
 
 export default function ProfessionalSidebar() {

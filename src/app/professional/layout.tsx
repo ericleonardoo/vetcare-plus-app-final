@@ -10,6 +10,7 @@ import ProfessionalHeader from '@/components/vetcare/ProfessionalHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { InvoicesProvider } from '@/context/InvoicesContext';
+import { InventoryProvider } from '@/context/InventoryContext';
 
 export default function ProfessionalLayout({
   children,
@@ -34,15 +35,17 @@ export default function ProfessionalLayout({
         <AppointmentsProvider>
           <NotificationsProvider>
             <InvoicesProvider>
-              <div className="flex min-h-screen w-full bg-muted/40">
-                <ProfessionalSidebar />
-                <div className="flex flex-1 flex-col">
-                   <ProfessionalHeader />
-                  <main className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col gap-8">
-                    {children}
-                  </main>
+              <InventoryProvider>
+                <div className="flex min-h-screen w-full bg-muted/40">
+                  <ProfessionalSidebar />
+                  <div className="flex flex-1 flex-col">
+                    <ProfessionalHeader />
+                    <main className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col gap-8">
+                      {children}
+                    </main>
+                  </div>
                 </div>
-              </div>
+              </InventoryProvider>
             </InvoicesProvider>
           </NotificationsProvider>
         </AppointmentsProvider>
