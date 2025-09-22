@@ -18,8 +18,6 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -28,7 +26,6 @@ import { useState } from 'react';
 const loginSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
   password: z.string().min(1, { message: "A senha é obrigatória." }),
-  isProfessional: z.boolean().default(false),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -43,7 +40,6 @@ export default function LoginPage() {
     defaultValues: {
       email: '',
       password: '',
-      isProfessional: false,
     },
   });
 
@@ -130,27 +126,7 @@ export default function LoginPage() {
                     </FormItem>
                   )}
                 />
-                <div className="flex items-center justify-between">
-                     <FormField
-                        control={form.control}
-                        name="isProfessional"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                <FormControl>
-                                    <Checkbox
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                        disabled={isLoading}
-                                    />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                    <Label htmlFor="isProfessional" className="cursor-pointer">
-                                        Acessar como profissional
-                                    </Label>
-                                </div>
-                            </FormItem>
-                        )}
-                    />
+                <div className="flex items-center justify-end">
                     <Link href="#" className="ml-auto inline-block text-sm underline">
                         Esqueceu sua senha?
                     </Link>
@@ -163,7 +139,7 @@ export default function LoginPage() {
             </Form>
           </CardContent>
           <div className="mt-4 text-center text-sm p-6 pt-0">
-            Não tem uma conta de cliente?{' '}
+            Não tem uma conta?{' '}
             <Link href="/cadastro" className="underline">
               Cadastre-se
             </Link>
