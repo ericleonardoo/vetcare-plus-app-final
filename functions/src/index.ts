@@ -1,11 +1,13 @@
 /**
- * Este é o código-fonte para as suas Firebase Functions.
+ * Funções de Backend para VetCare+
  *
- * IMPORTANTE:
- * 1. Copie todo o conteúdo deste arquivo.
- * 2. Cole no arquivo `functions/src/index.ts` do seu projeto local.
- * 3. Substitua o placeholder `[SUA_API_KEY_DO_RESEND]` pela sua chave real.
- * 4. Execute `firebase deploy --only functions` no seu terminal para publicar.
+ * Este arquivo contém as automações que rodam no servidor Firebase.
+ *
+ * PARA IMPLANTAR (DEPLOY):
+ * 1. Configure sua API Key do Resend no ambiente do Firebase:
+ *    firebase functions:config:set resend.apikey="SUA_CHAVE_AQUI"
+ * 2. Execute o comando no terminal na raiz do projeto:
+ *    firebase deploy --only functions
  */
 
 import * as functions from "firebase-functions";
@@ -16,18 +18,15 @@ import { Resend } from "resend";
 admin.initializeApp();
 const db = admin.firestore();
 
-// Inicialize o SDK do Resend com sua API Key
-// Substitua o placeholder pela sua chave de API real do Resend.
-// NUNCA coloque a chave diretamente aqui em produção. Use a configuração de ambiente do Firebase.
-// Veja a Fase 4, Passo 2 deste guia.
-const resend = new Resend("[SUA_API_KEY_DO_RESEND]");
+// Inicialize o SDK do Resend com a chave de API do ambiente de configuração
+const resend = new Resend(functions.config().resend.apikey);
 
 
 /**
  * Função agendada para rodar diariamente e verificar lembretes de vacina e check-up.
  */
 export const dailyReminderCheck = functions
-  .region("southamerica-east1") // Especifique a região
+  .region("southamerica-east1")
   .pubsub.schedule("every 24 hours")
   .onRun(async (context) => {
     console.log("Iniciando verificação diária de lembretes...");
@@ -44,6 +43,7 @@ export const dailyReminderCheck = functions
 
       for (const petDoc of petsSnapshot.docs) {
         const pet = petDoc.data();
+        if (!pet.tutorId) continue;
         const tutorRef = db.collection("tutors").doc(pet.tutorId);
         const tutorDoc = await tutorRef.get();
         if (!tutorDoc.exists) continue;
@@ -109,8 +109,7 @@ export const postConsultationFollowUp = functions
 
       console.log(`Fatura paga. Agendando follow-up para ${tutor.name} sobre ${petName}.`);
       
-      // Aqui não é possível usar "sleep" ou "await" por longos períodos.
-      // A abordagem correta em produção seria usar o Cloud Tasks para agendar o envio.
+      // Para um atraso real, o ideal é usar o Cloud Tasks.
       // Para simplificar, enviaremos o e-mail imediatamente.
       await sendEmail({
           to: tutor.email,
