@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import { usePets } from '@/context/PetsContext';
 import { useAppointments, Appointment } from '@/context/AppointmentsContext';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -39,26 +40,26 @@ export default function AppointmentsPage() {
   const { pets } = usePets();
   const { appointments, loading: appointmentsLoading } = useAppointments();
   const { user } = useAuth();
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+  const [pastAppointments, setPastAppointments] = useState<Appointment[]>([]);
 
-  const userAppointments = useMemo(() => {
-    if (!user) return [];
-    // A busca agora é feita com 'where' no contexto, mas uma filtragem dupla garante.
-    return appointments.filter(apt => apt.tutorId === user.uid);
-  }, [appointments, user]);
+  useEffect(() => {
+    if (!appointmentsLoading && user) {
+      const userAppointments = appointments.filter(apt => apt.tutorId === user.uid);
+      const now = new Date();
 
-  const upcomingAppointments = useMemo(() => 
-    userAppointments
-      .filter(apt => new Date(apt.date) >= new Date())
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()), 
-    [userAppointments]
-  );
-  
-  const pastAppointments = useMemo(() => 
-    userAppointments
-      .filter(apt => new Date(apt.date) < new Date())
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), 
-    [userAppointments]
-  );
+      const upcoming = userAppointments
+        .filter(apt => new Date(apt.date) >= now)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      const past = userAppointments
+        .filter(apt => new Date(apt.date) < now)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      setUpcomingAppointments(upcoming);
+      setPastAppointments(past);
+    }
+  }, [appointments, user, appointmentsLoading]);
 
 
   const getStatusVariant = (status: string) => {

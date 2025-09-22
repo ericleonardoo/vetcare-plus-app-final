@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -6,7 +7,7 @@ import {
 } from '@/components/ui/card';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2, PlusCircle, CalendarCheck2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import { addDays, format, startOfDay, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAppointments } from '@/context/AppointmentsContext';
@@ -43,18 +44,24 @@ const newAppointmentSchema = z.object({
 type NewAppointmentValues = z.infer<typeof newAppointmentSchema>;
 
 export default function AgendaPage() {
-    const [currentDate, setCurrentDate] = useState(new Date());
+    const [currentDate, setCurrentDate] = useState<Date | null>(null);
     const { appointments, addAppointment, loading: appointmentsLoading } = useAppointments();
     const { pets, loading: petsLoading } = usePets();
     const { toast } = useToast();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, startSubmittingTransition] = useTransition();
 
+    useEffect(() => {
+      // Set initial date only on the client side
+      setCurrentDate(new Date());
+    }, []);
+
     const form = useForm<NewAppointmentValues>({
         resolver: zodResolver(newAppointmentSchema),
     });
 
     const appointmentsByDay = useMemo(() => {
+        if (!currentDate) return [];
         return appointments.filter(apt => {
             const aptDate = new Date(apt.date);
             return aptDate.getFullYear() === currentDate.getFullYear() &&
@@ -64,16 +71,17 @@ export default function AgendaPage() {
     }, [currentDate, appointments]);
 
     const handlePrevDay = () => {
-        setCurrentDate(subDays(currentDate, 1));
+        if (currentDate) setCurrentDate(subDays(currentDate, 1));
     }
     const handleNextDay = () => {
-        setCurrentDate(addDays(currentDate, 1));
+        if (currentDate) setCurrentDate(addDays(currentDate, 1));
     }
     const handleToday = () => {
         setCurrentDate(new Date());
     }
 
     const handleAddAppointment = (data: NewAppointmentValues) => {
+        if (!currentDate) return;
         startSubmittingTransition(async () => {
             const selectedPet = pets.find(p => String(p.id) === data.petId);
             if (!selectedPet) return;
@@ -108,7 +116,7 @@ export default function AgendaPage() {
         });
     }
 
-    const isLoading = appointmentsLoading || petsLoading;
+    const isLoading = appointmentsLoading || petsLoading || !currentDate;
 
     const AgendaSkeleton = () => (
          <div className="grid grid-cols-[auto_repeat(2,_minmax(200px,_1fr))] min-w-[800px]">
@@ -154,7 +162,7 @@ export default function AgendaPage() {
          <div className='flex items-center gap-2'>
             <Button variant="outline" onClick={handlePrevDay}><ChevronLeft className='h-4 w-4'/></Button>
              <div className='font-semibold text-lg text-center min-w-[200px]'>
-                {format(currentDate, 'PPP', { locale: ptBR })}
+                {currentDate ? format(currentDate, 'PPP', { locale: ptBR }) : <Skeleton className='h-6 w-48 mx-auto' />}
             </div>
             <Button variant="outline" onClick={handleNextDay}><ChevronRight className='h-4 w-4'/></Button>
             <Button variant="outline" onClick={handleToday}>Hoje</Button>
@@ -170,7 +178,7 @@ export default function AgendaPage() {
                     <DialogHeader>
                         <DialogTitle>Agendar Nova Consulta</DialogTitle>
                         <DialogDescription>
-                            Preencha os dados para criar um novo agendamento para o dia {format(currentDate, 'PPP', { locale: ptBR })}.
+                            {currentDate ? `Preencha os dados para criar um novo agendamento para o dia ${format(currentDate, 'PPP', { locale: ptBR })}.` : 'Carregando...'}
                         </DialogDescription>
                     </DialogHeader>
                      <Form {...form}>

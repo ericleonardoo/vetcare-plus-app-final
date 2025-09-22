@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -13,8 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MoreHorizontal, PlusCircle, Loader2, Dog } from 'lucide-react';
 import Link from 'next/link';
 import { usePets } from '@/context/PetsContext';
-import { useAppointments } from '@/context/AppointmentsContext';
-import { useMemo } from 'react';
+import { useAppointments, Appointment } from '@/context/AppointmentsContext';
+import { useMemo, useState, useEffect } from 'react';
 import { useTutor } from '@/context/TutorContext';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,21 +25,21 @@ export default function DashboardPage() {
   const { appointments, loading: appointmentsLoading } = useAppointments();
   const { tutor, loading: tutorLoading } = useTutor();
   const { user } = useAuth();
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
 
-
-  const userAppointments = useMemo(() => {
-    if (!user) return [];
-    return appointments.filter(apt => apt.tutorId === user.uid);
-  }, [appointments, user]);
-
-
-  const upcomingAppointments = useMemo(() => 
-    userAppointments
-      .filter(apt => new Date(apt.date) >= new Date())
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(0, 5), // Limita a 5 agendamentos
-    [userAppointments]
-  );
+  useEffect(() => {
+    if (!appointmentsLoading && user) {
+      const userAppointments = appointments.filter(apt => apt.tutorId === user.uid);
+      const now = new Date();
+      
+      const upcoming = userAppointments
+        .filter(apt => new Date(apt.date) >= now)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .slice(0, 5); // Limita a 5 agendamentos
+      
+      setUpcomingAppointments(upcoming);
+    }
+  }, [appointments, user, appointmentsLoading]);
 
   const isLoading = tutorLoading || petsLoading || appointmentsLoading;
 
