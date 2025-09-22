@@ -10,9 +10,9 @@
  */
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { addDays } from 'date-fns';
+import { addDays, endOfDay, startOfDay } from 'date-fns';
 
 
 const SuggestAppointmentTimesInputSchema = z.object({
@@ -54,7 +54,7 @@ Leve em consideração o seguinte:
 2. A disponibilidade da equipe, que segue um cronograma semanal.
 3. Horários específicos que já estão bloqueados/ocupados.
 4. O fuso horário do usuário para garantir que os horários sejam convenientes para ele.
-5. Se um 'dateRange' for fornecido, sugira horários apenas dentro desse intervalo.
+5. Sugira horários apenas dentro do intervalo de data e hora fornecido no campo 'staffAvailability'.
 
 Informações da Solicitação:
 - Tipo de Serviço: {{{serviceType}}}
@@ -65,6 +65,7 @@ Informações da Solicitação:
 
 Sugira exatamente {{numberOfSuggestions}} horários de consulta ideais.
 Retorne os horários sugeridos no formato ISO 8601 dentro de um array JSON.
+Se não houver horários disponíveis, retorne um array vazio.
 `,
 });
 
@@ -93,15 +94,23 @@ export const suggestAppointmentTimesFlow = ai.defineFlow(
         });
     });
 
-    const appointmentsSnapshot = await getDocs(collection(db, "appointments"));
+    const selectedDate = new Date(input.date);
+    const startOfSelectedDay = startOfDay(selectedDate);
+    const endOfSelectedDay = endOfDay(selectedDate);
+
+    const appointmentsSnapshot = await getDocs(query(
+        collection(db, "appointments"),
+        where('date', '>=', Timestamp.fromDate(startOfSelectedDay)),
+        where('date', '<=', Timestamp.fromDate(endOfSelectedDay))
+    ));
     const blockedTimes = appointmentsSnapshot.docs.map(doc => doc.data().date);
 
     const availabilityWithBlockedTimes = {
       ...availabilityMap,
       blocked: blockedTimes,
       dateRange: {
-        start: new Date(input.date).toISOString(),
-        end: addDays(new Date(input.date), 1).toISOString()
+        start: startOfSelectedDay.toISOString(),
+        end: endOfSelectedDay.toISOString()
       }
     };
     
