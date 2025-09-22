@@ -11,6 +11,7 @@
 import { ai } from '@/ai/genkit';
 import { scheduleHumanFollowUp } from '@/ai/tools/clinic-tools';
 import { z } from 'genkit';
+import { Message, Part, ToolRequestPart, renderToolResponse, toolRequest, } from 'genkit';
 
 const MessageSchema = z.object({
   role: z.enum(['user', 'model']),
@@ -31,7 +32,7 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
 
 const prompt = ai.definePrompt({
   name: 'chatPrompt',
-  input: { schema: ChatInputSchema },
+  input: { schema: z.object({ history: z.array(z.any()) }) },
   output: { format: 'text' },
   tools: [scheduleHumanFollowUp],
   prompt: `Você é "Dr. Gato", um assistente de IA amigável e prestativo da clínica veterinária VetCare+.
@@ -66,7 +67,33 @@ const chatFlow = ai.defineFlow(
     outputSchema: ChatOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    const messages: Message[] = input.history.map(
+      (message) =>
+        new Message({
+          role: message.role,
+          content: [{ text: message.content }],
+        })
+    );
+
+    while (true) {
+      const response = await prompt({ history: messages });
+      const choice = response.choices[0];
+
+      if (!choice) {
+        throw new Error('No valid choice in AI response.');
+      }
+      
+      const toolRequestPart = choice.message.content.find(part => part.toolRequest) as ToolRequestPart | undefined;
+      
+      if (!toolRequestPart) {
+        // Se não houver solicitação de ferramenta, retorne o texto da resposta.
+        return choice.message.content.map(part => part.text || '').join('');
+      }
+
+      // Se houver uma solicitação de ferramenta, execute-a.
+      const toolResponse = await toolRequestPart.toolRequest.execute();
+      messages.push(choice.message);
+      messages.push(renderToolResponse(toolRequestPart.toolRequest, toolResponse));
+    }
   }
 );
