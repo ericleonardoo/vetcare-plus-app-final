@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -7,7 +8,6 @@
  * - ChatInput - O tipo de entrada para a função de chat.
  * - ChatOutput - O tipo de retorno para a função de chat.
  */
-import '@/lib/genkit.config'; // Garante que o Genkit seja configurado!
 import { ai } from '@/ai/genkit';
 import { scheduleHumanFollowUp } from '@/ai/tools/clinic-tools';
 import { z } from 'genkit';

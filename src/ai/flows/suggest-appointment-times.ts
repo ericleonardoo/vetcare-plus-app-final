@@ -8,7 +8,6 @@
  * - SuggestAppointmentTimesInput - The input type for the suggestAppointmentTimes function.
  * - SuggestAppointmentTimesOutput - The return type for the suggestAppointmentTimes function.
  */
-import '@/lib/genkit.config'; // Garante que o Genkit seja configurado!
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 

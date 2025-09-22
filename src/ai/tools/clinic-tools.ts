@@ -3,7 +3,6 @@
 /**
  * @fileOverview Ferramentas de IA para a clínica VetCare+.
  */
-import '@/lib/genkit.config'; // Garante que o Genkit seja configurado!
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 

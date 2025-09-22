@@ -1,8 +1,16 @@
+
 /**
- * @fileOverview Reexporta a instância global do Genkit.
- * Após a configuração central em `genkit.config.ts`, este arquivo
- * serve como um atalho conveniente para acessar o objeto `ai` em toda a aplicação.
+ * @fileOverview Inicializa e exporta a instância global do Genkit.
+ * Este arquivo serve como a única fonte de verdade para a configuração do Genkit,
+ * garantindo que a mesma instância seja usada em toda a aplicação.
  */
 import { genkit } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
-export const ai = genkit();
+export const ai = genkit({
+  plugins: [
+    googleAI(), // Configura o plugin do Google AI
+  ],
+  logLevel: 'debug',
+  enableTracingAndMetrics: true,
+});

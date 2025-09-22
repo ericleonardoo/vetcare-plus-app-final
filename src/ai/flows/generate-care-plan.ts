@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -7,7 +8,6 @@
  * - GenerateCarePlanInput - O tipo de entrada para a função generateCarePlan.
  * - GenerateCarePlanOutput - O tipo de retorno para a função generateCarePlan.
  */
-import '@/lib/genkit.config'; // Garante que o Genkit seja configurado!
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
