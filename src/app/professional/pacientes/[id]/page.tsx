@@ -92,7 +92,7 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
   const { pets, addHealthHistoryEntry, addVaccineHistoryEntry, updatePet, loading: petsLoading } = usePets();
   const { tutors, loading: tutorsLoading } = useTutors();
   const { addInvoice } = useInvoices();
-  const { inventory, loading: inventoryLoading } = useInventory();
+  const { inventory, updateStock, loading: inventoryLoading } = useInventory();
 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
@@ -228,6 +228,16 @@ export default function ProfessionalPetRecordPage({ params }: { params: { id: st
                   items: data.items.map(i => ({...i, inventoryId: i.inventoryId || undefined })), // Garante que o campo opcional seja undefined
                   status: status
               });
+
+              if(status === 'Pago') {
+                const itemsToUpdate = data.items
+                    .filter(item => item.inventoryId)
+                    .map(item => ({ id: item.inventoryId!, quantity: item.quantity }));
+                if (itemsToUpdate.length > 0) {
+                    await updateStock(itemsToUpdate);
+                }
+              }
+
               toast({
                   title: `Fatura Gerada como ${status}!`,
                   description: `A fatura para ${pet.name} foi salva com sucesso.`

@@ -42,10 +42,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useInventory } from '@/context/InventoryContext';
 
 export default function ProfessionalFinancialPage() {
   const { invoices, loading, updateInvoiceStatus } = useInvoices();
   const { tutors, loading: tutorsLoading } = useTutors();
+  const { updateStock } = useInventory();
   const [filter, setFilter] = useState({ 'Pendente': true, 'Pago': true, 'Atrasado': true });
   const [invoiceToUpdate, setInvoiceToUpdate] = useState<Invoice | null>(null);
   const [isUpdatePending, startUpdateTransition] = useTransition();
@@ -61,7 +63,10 @@ export default function ProfessionalFinancialPage() {
     if (!invoiceToUpdate) return;
     startUpdateTransition(async () => {
         try {
-            await updateInvoiceStatus(invoiceToUpdate.id, 'Pago');
+            const itemsToDeduct = await updateInvoiceStatus(invoiceToUpdate.id, 'Pago');
+            if (itemsToDeduct.length > 0) {
+                await updateStock(itemsToDeduct);
+            }
             toast({
                 title: 'Status Alterado!',
                 description: `A fatura #${invoiceToUpdate.invoiceId} foi marcada como paga.`

@@ -5,7 +5,6 @@ import React, { createContext, useState, useContext, ReactNode, useEffect, useCa
 import { useAuth } from './AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, onSnapshot, Unsubscribe, Timestamp, doc, updateDoc } from 'firebase/firestore';
-import { useInventory } from './InventoryContext';
 
 export type InvoiceStatus = 'Pendente' | 'Pago' | 'Atrasado';
 
@@ -33,7 +32,7 @@ export type Invoice = {
 type InvoicesContextType = {
   invoices: Invoice[];
   addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceId' | 'createdAt' | 'totalAmount'>) => Promise<void>;
-  updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>;
+  updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<InvoiceItem[]>;
   loading: boolean;
 };
 
@@ -42,7 +41,6 @@ const InvoicesContext = createContext<InvoicesContextType | undefined>(undefined
 
 export const InvoicesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
-  const { updateStock } = useInventory();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -105,20 +103,9 @@ export const InvoicesProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
 
     await addDoc(collection(db, "invoices"), newInvoiceData);
-
-    // Se a fatura for registrada como paga, deduz o estoque
-    if (newInvoiceData.status === 'Pago') {
-        const itemsToUpdate = newInvoiceData.items
-            .filter(item => item.inventoryId)
-            .map(item => ({ id: item.inventoryId!, quantity: item.quantity }));
-        
-        if (itemsToUpdate.length > 0) {
-            await updateStock(itemsToUpdate);
-        }
-    }
   };
 
-  const updateInvoiceStatus = async (id: string, status: InvoiceStatus) => {
+  const updateInvoiceStatus = async (id: string, status: InvoiceStatus): Promise<InvoiceItem[]> => {
     if (!user || !user.email?.includes('vet')) throw new Error("Apenas profissionais podem alterar o status.");
 
     const invoiceRef = doc(db, 'invoices', id);
@@ -136,16 +123,15 @@ export const InvoicesProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     await updateDoc(invoiceRef, updateData);
 
-    // Se o status mudou para PAGO, deduz o estoque
+    // If status changed to 'Paid', return items to be deducted from stock
     if (status === 'Pago' && invoiceToUpdate.status !== 'Pago') {
          const itemsToUpdate = invoiceToUpdate.items
             .filter(item => item.inventoryId)
-            .map(item => ({ id: item.inventoryId!, quantity: item.quantity }));
+            .map(item => ({ id: item.inventoryId!, quantity: item.quantity, description: '', unitPrice: 0 }));
         
-        if (itemsToUpdate.length > 0) {
-            await updateStock(itemsToUpdate);
-        }
+        return itemsToUpdate;
     }
+    return [];
   };
 
 
