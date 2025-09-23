@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useState } from 'react';
+import { Separator } from '@/components/ui/separator';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
@@ -138,11 +139,23 @@ export default function LoginPage() {
               </form>
             </Form>
           </CardContent>
-          <div className="mt-4 text-center text-sm p-6 pt-0">
-            Não tem uma conta?{' '}
-            <Link href="/cadastro" className="underline">
-              Cadastre-se
-            </Link>
+          <div className="text-center text-sm p-6 pt-0 space-y-4">
+             <div>
+                Não tem uma conta?{' '}
+                <Link href="/cadastro" className="underline">
+                Cadastre-se
+                </Link>
+            </div>
+            <div className="flex items-center space-x-2">
+                <Separator className="flex-1" />
+                <span className="px-2 text-xs text-muted-foreground">OU</span>
+                <Separator className="flex-1" />
+            </div>
+            <div className="text-center">
+                <Link href="/login" className="underline text-sm font-medium">
+                    Acessar como Profissional
+                </Link>
+            </div>
           </div>
         </Card>
       </div>
