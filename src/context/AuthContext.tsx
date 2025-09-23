@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithPopup, getRedirectResult } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -27,79 +27,56 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
       if (user) {
         setUser(user);
-        await checkUserRole(user);
-        handleRedirects(user);
+        await handleUserSession(user);
       } else {
         setUser(null);
         setIsProfessional(false);
         setLoading(false);
       }
     });
-
-    handleRedirectResult();
-
     return () => unsubscribe();
   }, []);
-  
-  const handleRedirectResult = async () => {
-    try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-            const user = result.user;
-            const userDocRef = doc(db, "tutors", user.uid);
-            const userDoc = await getDoc(userDocRef);
 
-            if (!userDoc.exists()) {
-                const role = sessionStorage.getItem('google_signup_role') || 'customer';
-                await setDoc(userDocRef, {
-                    name: user.displayName,
-                    email: user.email,
-                    phone: user.phoneNumber || '',
-                    role: role,
-                });
-                sessionStorage.removeItem('google_signup_role');
-            }
-            await checkUserRole(user);
-            handleRedirects(user);
-        } else {
-            setLoading(false);
-        }
-    } catch (error) {
-        console.error("Erro ao obter resultado do redirecionamento do Google:", error);
-        setLoading(false);
-    }
-  };
-
-  const checkUserRole = async (user: User) => {
+  const handleUserSession = async (user: User) => {
     const userDocRef = doc(db, 'tutors', user.uid);
     const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists() && userDoc.data().role === 'professional') {
-      setIsProfessional(true);
+
+    let userData;
+    if (userDoc.exists()) {
+        userData = userDoc.data();
+        if (userData.role === 'professional') {
+            setIsProfessional(true);
+        } else {
+            setIsProfessional(false);
+        }
     } else {
-      setIsProfessional(false);
+        // This should not happen with the new logic, but as a fallback
+        const role = sessionStorage.getItem('google_signup_role') || 'customer';
+        userData = {
+            name: user.displayName,
+            email: user.email,
+            phone: user.phoneNumber || '',
+            role: role,
+        };
+        await setDoc(userDocRef, userData);
+        setIsProfessional(role === 'professional');
+        sessionStorage.removeItem('google_signup_role');
     }
+
+    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro');
+    const isProfileComplete = userData.phone && userData.phone.trim() !== '';
+
+    if (!isProfileComplete && pathname !== '/cadastro/completar-perfil') {
+        router.push('/cadastro/completar-perfil');
+    } else if (isProfileComplete && (isAuthPage || pathname === '/cadastro/completar-perfil')) {
+        router.push(userData.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard');
+    }
+
+    setLoading(false);
   };
-
-  const handleRedirects = async (user: User) => {
-      const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro');
-      
-      const userDocRef = doc(db, 'tutors', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const isProfileComplete = userData.phone && userData.phone.trim() !== '';
-
-          if (!isProfileComplete && pathname !== '/cadastro/completar-perfil') {
-              router.push('/cadastro/completar-perfil');
-          } else if (isProfileComplete && (isAuthPage || pathname === '/cadastro/completar-perfil')) {
-              router.push(userData.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard');
-          }
-      }
-      setLoading(false); // Finaliza o carregamento após o redirecionamento
-  }
   
   useEffect(() => {
     if (!loading && !user) {
@@ -113,8 +90,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signInWithGoogle = async (role: 'customer' | 'professional' = 'customer') => {
       const provider = new GoogleAuthProvider();
+      
+      // Store role in case this is a new signup
       sessionStorage.setItem('google_signup_role', role);
-      await signInWithRedirect(auth, provider);
+
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        const userDocRef = doc(db, "tutors", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+            await setDoc(userDocRef, {
+                name: user.displayName,
+                email: user.email,
+                phone: user.phoneNumber || '',
+                role: sessionStorage.getItem('google_signup_role') || 'customer',
+            });
+        }
+        sessionStorage.removeItem('google_signup_role');
+        
+      } catch (error) {
+          sessionStorage.removeItem('google_signup_role');
+          console.error("Erro no signInWithPopup:", error);
+          throw error; // Re-throw the error to be caught by the UI
+      }
   };
 
   const logout = async () => {
