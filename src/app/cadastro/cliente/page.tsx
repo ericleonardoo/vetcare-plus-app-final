@@ -153,7 +153,7 @@ export default function CustomerSignupPage() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                  <FormField
                   control={form.control}
                   name="name"
@@ -219,20 +219,20 @@ export default function CustomerSignupPage() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
+                <Button type="submit" className="w-full !mt-6" disabled={isLoading || isGoogleLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Criar Conta
                 </Button>
-                <div className="relative my-4">
-                    <Separator />
-                    <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OU</span>
-                </div>
-                <Button variant="outline" className="w-full" onClick={handleGoogleSignUp} disabled={isLoading || isGoogleLoading}>
-                    {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
-                    Cadastrar com Google
-                </Button>
               </form>
             </Form>
+            <div className="relative my-4">
+                <Separator />
+                <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OU</span>
+            </div>
+            <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignUp} disabled={isLoading || isGoogleLoading}>
+                {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                Cadastrar com Google
+            </Button>
           </CardContent>
            <div className="mt-4 text-center text-sm p-6 pt-0">
             Já tem uma conta?{' '}
