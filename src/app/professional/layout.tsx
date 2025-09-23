@@ -22,11 +22,12 @@ export default function ProfessionalLayout({
    const router = useRouter();
 
    if (authLoading) {
+    // O AuthContext já mostra um spinner global, então aqui podemos apenas esperar.
     return null;
   }
 
-  // Redireciona se não for um profissional, garantindo a segurança da rota.
-  if (!isProfessional) {
+  // Redireciona se não for um profissional ou se não houver usuário
+  if (!user || !isProfessional) {
     router.push('/login');
     return null;
   }

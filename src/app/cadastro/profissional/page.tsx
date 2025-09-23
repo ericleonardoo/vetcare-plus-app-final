@@ -51,6 +51,7 @@ export default function ProfessionalSignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { signInWithGoogle } = useAuth();
+  const router = useRouter();
 
 
   const form = useForm<SignupFormValues>({
@@ -68,9 +69,10 @@ export default function ProfessionalSignupPage() {
       setIsGoogleLoading(true);
       try {
           await signInWithGoogle('professional');
+          // A lógica de redirecionamento agora é tratada pelo AuthContext
           toast({
-              title: "Cadastro com Google bem-sucedido!",
-              description: "Sua conta profissional foi criada. Você será redirecionado em breve.",
+              title: "Autenticação com Google bem-sucedida!",
+              description: "Finalize seu cadastro ou aguarde o redirecionamento.",
           });
       } catch (error: any) {
           let errorMessage = "Não foi possível se cadastrar com o Google. Tente novamente.";
@@ -226,7 +228,7 @@ export default function ProfessionalSignupPage() {
                 </Button>
               </form>
             </Form>
-            <div className="relative my-4">
+            <div className="relative my-6">
                 <Separator />
                 <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OU</span>
             </div>

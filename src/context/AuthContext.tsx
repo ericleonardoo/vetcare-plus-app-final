@@ -29,7 +29,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        // Se houver um usuário, verifique sua role no Firestore
         const userDocRef = doc(db, 'tutors', user.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists() && userDoc.data().role === 'professional') {
@@ -51,8 +50,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
           const result = await signInWithPopup(auth, provider);
           const user = result.user;
-
-          // Verifica se o usuário já existe no Firestore
           const userDocRef = doc(db, "tutors", user.uid);
           const userDoc = await getDoc(userDocRef);
 
@@ -61,53 +58,51 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               await setDoc(userDocRef, {
                   name: user.displayName,
                   email: user.email,
-                  phone: user.phoneNumber || '', // Google pode não fornecer telefone
+                  phone: user.phoneNumber || '',
                   role: role,
               });
           }
-          // Se o usuário já existe, o login é concluído e o AuthContext
-          // cuidará do redirecionamento com base na role existente.
-          
       } catch (error) {
           console.error("Erro durante o signInWithGoogle:", error);
-          // O erro será propagado para ser tratado na UI.
           throw error;
       }
   };
-
 
   useEffect(() => {
     if (loading) return;
 
     const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro');
-    const isProfessionalRoute = pathname.startsWith('/professional');
-    const isCustomerRoute = pathname.startsWith('/portal');
+    const isPublicPage = !pathname.startsWith('/portal') && !pathname.startsWith('/professional');
 
-    if (!user && (isProfessionalRoute || isCustomerRoute)) {
-      router.push('/login');
-    }
-    
     if (user) {
-      if (isAuthPage) {
-        // Se o usuário está logado e em uma página de autenticação, redirecione-o
-        router.push(isProfessional ? '/professional/dashboard' : '/portal/dashboard');
-      } else if (isProfessional && isCustomerRoute) {
-        // Se é um profissional tentando acessar rota de cliente, redirecione
-        router.push('/professional/dashboard');
-      } else if (!isProfessional && isProfessionalRoute) {
-        // Se não é um profissional tentando acessar a rota de profissional, bloqueie
-        router.push('/portal/dashboard');
-      }
-    }
+        const userDocRef = doc(db, 'tutors', user.uid);
+        getDoc(userDocRef).then(userDoc => {
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                const isProfileComplete = userData.phone && userData.phone.trim() !== '';
 
-  }, [user, isProfessional, loading, pathname, router]);
+                if (!isProfileComplete && pathname !== '/cadastro/completar-perfil') {
+                    // Se o perfil está incompleto, redireciona para completar
+                    router.push('/cadastro/completar-perfil');
+                } else if (isProfileComplete && (isAuthPage || pathname === '/cadastro/completar-perfil')) {
+                    // Se o perfil está completo e está numa página de auth, redireciona para o dashboard
+                    router.push(userData.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard');
+                }
+            }
+        });
+    } else {
+        // Se não há usuário e a rota não é pública, redireciona para o login
+        if (!isPublicPage) {
+            router.push('/login');
+        }
+    }
+  }, [user, loading, pathname, router]);
 
   const logout = async () => {
     await signOut(auth);
     setIsProfessional(false);
-    router.push('/login'); // Redireciona explicitamente para garantir
+    router.push('/login');
   };
-
 
   if (loading) {
     return (

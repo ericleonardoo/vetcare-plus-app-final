@@ -45,6 +45,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { signInWithGoogle } = useAuth();
+  const router = useRouter();
 
 
   const form = useForm<LoginFormValues>({
@@ -59,9 +60,10 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     try {
         await signInWithGoogle();
+        // A lógica de redirecionamento agora é tratada pelo AuthContext
         toast({
             title: "Login bem-sucedido!",
-            description: "Você será redirecionado em breve.",
+            description: "Aguarde, estamos te redirecionando...",
         });
     } catch (error) {
         console.error("Erro no login com Google:", error);
@@ -168,16 +170,16 @@ export default function LoginPage() {
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
                    Entrar
                 </Button>
-                 <div className="relative my-4">
-                    <Separator />
-                    <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OU</span>
-                </div>
-                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
-                    {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
-                    Continuar com Google
-                </Button>
               </form>
             </Form>
+            <div className="relative my-6">
+                <Separator />
+                <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OU</span>
+            </div>
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
+                {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                Continuar com Google
+            </Button>
           </CardContent>
           <div className="text-center text-sm p-6 pt-0 space-y-4">
              <div>

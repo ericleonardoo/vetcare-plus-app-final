@@ -10,23 +10,24 @@ import { useRouter } from 'next/navigation';
 import React from 'react';
 import PortalHeader from '@/components/vetcare/PortalHeader';
 import { InvoicesProvider } from '@/context/InvoicesContext';
+import { Loader2 } from 'lucide-react';
 
 export default function PortalLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isProfessional } = useAuth();
   const router = useRouter();
 
   if (authLoading) {
-    // AuthProvider já mostra um spinner global, então aqui podemos apenas esperar.
+    // O AuthProvider já mostra um spinner global, então aqui podemos apenas esperar.
     return null;
   }
 
-  if (!user) {
-    // Redireciona se não houver usuário após o carregamento da autenticação.
-    // O useEffect no AuthContext já cuida disso, mas é uma salvaguarda.
+  if (!user || isProfessional) {
+    // Redireciona se não houver usuário ou se for um profissional tentando acessar o portal do cliente.
+    // O AuthContext já lida com grande parte disso, mas é uma salvaguarda.
     router.push('/login');
     return null; 
   }
@@ -49,5 +50,3 @@ export default function PortalLayout({
     </TutorProvider>
   );
 }
-
-    

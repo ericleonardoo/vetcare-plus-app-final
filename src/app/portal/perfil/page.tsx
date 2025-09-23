@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -133,7 +134,7 @@ export default function ProfilePage() {
                         <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                            <Input type="email" {...field} disabled={isPending || !!user?.email} />
+                            <Input type="email" {...field} disabled={true} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -152,21 +153,6 @@ export default function ProfilePage() {
                         </FormItem>
                     )}
                 />
-
-                <div className="border-t pt-6">
-                    <h3 className="text-lg font-medium">Alterar Senha</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Deixe os campos em branco para não alterar a senha atual.</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <FormLabel htmlFor="current-password">Senha Atual</FormLabel>
-                            <Input id="current-password" type="password" disabled={true} />
-                        </div>
-                        <div className="grid gap-2">
-                            <FormLabel htmlFor="new-password">Nova Senha</FormLabel>
-                            <Input id="new-password" type="password" disabled={true} />
-                        </div>
-                    </div>
-                </div>
                 <div className="flex justify-end pt-4">
                     <Button type="submit" disabled={isPending || isTutorLoading}>
                          {(isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
