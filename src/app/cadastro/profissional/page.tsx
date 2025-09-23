@@ -23,6 +23,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { useAuth } from '@/context/AuthContext';
+import { Separator } from '@/components/ui/separator';
+
+const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <title>Google</title>
+        <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.05 1.05-2.86 2.25-4.82 2.25-3.64 0-6.55-3.05-6.55-6.85s2.91-6.85 6.55-6.85c2.06 0 3.49.83 4.3 1.6l2.43-2.43C18.4 2.1 15.74 1 12.48 1 7.22 1 3.22 4.9 3.22 10s4 9 9.26 9c2.86 0 5.02-1 6.56-2.58 1.6-1.6 2.3-3.9 2.3-6.14 0-.54-.05-1.08-.14-1.6z" />
+    </svg>
+);
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: "O nome é obrigatório." }),
@@ -38,9 +47,11 @@ const signupSchema = z.object({
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function ProfessionalSignupPage() {
-  const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { signInWithGoogle } = useAuth();
+
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -52,6 +63,30 @@ export default function ProfessionalSignupPage() {
       confirmPassword: '',
     },
   });
+
+  const handleGoogleSignUp = async () => {
+      setIsGoogleLoading(true);
+      try {
+          await signInWithGoogle('professional');
+          toast({
+              title: "Cadastro com Google bem-sucedido!",
+              description: "Sua conta profissional foi criada. Você será redirecionado em breve.",
+          });
+      } catch (error: any) {
+          let errorMessage = "Não foi possível se cadastrar com o Google. Tente novamente.";
+          if (error.code === 'auth/account-exists-with-different-credential') {
+              errorMessage = "Já existe uma conta com este e-mail. Tente fazer login.";
+          }
+          console.error("Erro no cadastro com Google:", error);
+          toast({
+              variant: "destructive",
+              title: "Erro no Cadastro com Google",
+              description: errorMessage,
+          });
+      } finally {
+          setIsGoogleLoading(false);
+      }
+  };
 
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
@@ -127,7 +162,7 @@ export default function ProfessionalSignupPage() {
                     <FormItem>
                       <FormLabel>Nome Completo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Dr(a). Maria da Silva" {...field} disabled={isLoading} />
+                        <Input placeholder="Dr(a). Maria da Silva" {...field} disabled={isLoading || isGoogleLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -140,7 +175,7 @@ export default function ProfessionalSignupPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="seu@email.com" {...field} disabled={isLoading} />
+                        <Input type="email" placeholder="seu@email.com" {...field} disabled={isLoading || isGoogleLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -153,7 +188,7 @@ export default function ProfessionalSignupPage() {
                     <FormItem>
                       <FormLabel>Telefone</FormLabel>
                       <FormControl>
-                        <Input type="tel" placeholder="(11) 98765-4321" {...field} disabled={isLoading} />
+                        <Input type="tel" placeholder="(11) 98765-4321" {...field} disabled={isLoading || isGoogleLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -166,7 +201,7 @@ export default function ProfessionalSignupPage() {
                     <FormItem>
                       <FormLabel>Senha</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} disabled={isLoading} />
+                        <Input type="password" {...field} disabled={isLoading || isGoogleLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -179,15 +214,23 @@ export default function ProfessionalSignupPage() {
                     <FormItem>
                       <FormLabel>Confirmar Senha</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} disabled={isLoading} />
+                        <Input type="password" {...field} disabled={isLoading || isGoogleLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Criar Conta Profissional
+                </Button>
+                 <div className="relative my-4">
+                    <Separator />
+                    <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OU</span>
+                </div>
+                <Button variant="outline" className="w-full" onClick={handleGoogleSignUp} disabled={isLoading || isGoogleLoading}>
+                    {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                    Cadastrar com Google
                 </Button>
               </form>
             </Form>

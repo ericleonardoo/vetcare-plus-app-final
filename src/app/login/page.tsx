@@ -23,6 +23,15 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/context/AuthContext';
+
+const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <title>Google</title>
+        <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.05 1.05-2.86 2.25-4.82 2.25-3.64 0-6.55-3.05-6.55-6.85s2.91-6.85 6.55-6.85c2.06 0 3.49.83 4.3 1.6l2.43-2.43C18.4 2.1 15.74 1 12.48 1 7.22 1 3.22 4.9 3.22 10s4 9 9.26 9c2.86 0 5.02-1 6.56-2.58 1.6-1.6 2.3-3.9 2.3-6.14 0-.54-.05-1.08-.14-1.6z" />
+    </svg>
+);
+
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
@@ -32,9 +41,11 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { signInWithGoogle } = useAuth();
+
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -43,6 +54,27 @@ export default function LoginPage() {
       password: '',
     },
   });
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    try {
+        await signInWithGoogle();
+        toast({
+            title: "Login bem-sucedido!",
+            description: "Você será redirecionado em breve.",
+        });
+    } catch (error) {
+        console.error("Erro no login com Google:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro no Login com Google",
+            description: "Não foi possível fazer login com o Google. Tente novamente.",
+        });
+    } finally {
+        setIsGoogleLoading(false);
+    }
+  };
+
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
@@ -108,7 +140,7 @@ export default function LoginPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="seu@email.com" {...field} disabled={isLoading} />
+                        <Input type="email" placeholder="seu@email.com" {...field} disabled={isLoading || isGoogleLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -121,7 +153,7 @@ export default function LoginPage() {
                     <FormItem>
                       <FormLabel>Senha</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} disabled={isLoading} />
+                        <Input type="password" {...field} disabled={isLoading || isGoogleLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -132,9 +164,17 @@ export default function LoginPage() {
                         Esqueceu sua senha?
                     </Link>
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
                    Entrar
+                </Button>
+                 <div className="relative my-4">
+                    <Separator />
+                    <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OU</span>
+                </div>
+                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
+                    {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                    Continuar com Google
                 </Button>
               </form>
             </Form>
@@ -144,16 +184,6 @@ export default function LoginPage() {
                 Não tem uma conta?{' '}
                 <Link href="/cadastro" className="underline">
                 Cadastre-se
-                </Link>
-            </div>
-            <div className="flex items-center space-x-2">
-                <Separator className="flex-1" />
-                <span className="px-2 text-xs text-muted-foreground">OU</span>
-                <Separator className="flex-1" />
-            </div>
-            <div className="text-center">
-                <Link href="/login" className="underline text-sm font-medium">
-                    Acessar como Profissional
                 </Link>
             </div>
           </div>
