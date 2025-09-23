@@ -47,6 +47,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signInWithGoogle = async (role: 'customer' | 'professional' = 'customer') => {
       const provider = new GoogleAuthProvider();
+      // Força o uso do Client ID obtido do console do Firebase, conforme a imagem do usuário.
+      provider.setCustomParameters({
+        client_id: '435186047851-fh8mk4rhkq36clcdfdv4dg84detcq9lt.apps.googleusercontent.com'
+      });
+
       try {
           const result = await signInWithPopup(auth, provider);
           const user = result.user;
