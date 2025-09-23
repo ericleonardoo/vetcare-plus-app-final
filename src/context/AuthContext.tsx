@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -27,79 +27,99 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
       if (user) {
-        const userDocRef = doc(db, 'tutors', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists() && userDoc.data().role === 'professional') {
-          setIsProfessional(true);
-        } else {
-          setIsProfessional(false);
-        }
+        setUser(user);
+        await checkUserRole(user);
+        handleRedirects(user);
       } else {
+        setUser(null);
         setIsProfessional(false);
+        setLoading(false);
       }
-      setLoading(false);
     });
+
+    handleRedirectResult();
 
     return () => unsubscribe();
   }, []);
+  
+  const handleRedirectResult = async () => {
+    try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+            const user = result.user;
+            const userDocRef = doc(db, "tutors", user.uid);
+            const userDoc = await getDoc(userDocRef);
 
-  const signInWithGoogle = async (role: 'customer' | 'professional' = 'customer') => {
-      const provider = new GoogleAuthProvider();
-      try {
-          const result = await signInWithPopup(auth, provider);
-          const user = result.user;
-          const userDocRef = doc(db, "tutors", user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (!userDoc.exists()) {
-              // Se o usuário não existe, cria um novo documento
-              await setDoc(userDocRef, {
-                  name: user.displayName,
-                  email: user.email,
-                  phone: user.phoneNumber || '',
-                  role: role,
-              });
-          }
-      } catch (error) {
-          console.error("Erro durante o signInWithGoogle:", error);
-          throw error;
-      }
+            if (!userDoc.exists()) {
+                const role = sessionStorage.getItem('google_signup_role') || 'customer';
+                await setDoc(userDocRef, {
+                    name: user.displayName,
+                    email: user.email,
+                    phone: user.phoneNumber || '',
+                    role: role,
+                });
+                sessionStorage.removeItem('google_signup_role');
+            }
+            await checkUserRole(user);
+            handleRedirects(user);
+        } else {
+            setLoading(false);
+        }
+    } catch (error) {
+        console.error("Erro ao obter resultado do redirecionamento do Google:", error);
+        setLoading(false);
+    }
   };
 
-  useEffect(() => {
-    if (loading) return;
-
-    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro');
-    const isPublicPage = !pathname.startsWith('/portal') && !pathname.startsWith('/professional');
-
-    if (user) {
-        const userDocRef = doc(db, 'tutors', user.uid);
-        getDoc(userDocRef).then(userDoc => {
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                const isProfileComplete = userData.phone && userData.phone.trim() !== '';
-
-                if (!isProfileComplete && pathname !== '/cadastro/completar-perfil') {
-                    // Se o perfil está incompleto, redireciona para completar
-                    router.push('/cadastro/completar-perfil');
-                } else if (isProfileComplete && (isAuthPage || pathname === '/cadastro/completar-perfil')) {
-                    // Se o perfil está completo e está numa página de auth, redireciona para o dashboard
-                    router.push(userData.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard');
-                }
-            }
-        });
+  const checkUserRole = async (user: User) => {
+    const userDocRef = doc(db, 'tutors', user.uid);
+    const userDoc = await getDoc(userDocRef);
+    if (userDoc.exists() && userDoc.data().role === 'professional') {
+      setIsProfessional(true);
     } else {
-        // Se não há usuário e a rota não é pública, redireciona para o login
+      setIsProfessional(false);
+    }
+  };
+
+  const handleRedirects = async (user: User) => {
+      const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro');
+      
+      const userDocRef = doc(db, 'tutors', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const isProfileComplete = userData.phone && userData.phone.trim() !== '';
+
+          if (!isProfileComplete && pathname !== '/cadastro/completar-perfil') {
+              router.push('/cadastro/completar-perfil');
+          } else if (isProfileComplete && (isAuthPage || pathname === '/cadastro/completar-perfil')) {
+              router.push(userData.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard');
+          }
+      }
+      setLoading(false); // Finaliza o carregamento após o redirecionamento
+  }
+  
+  useEffect(() => {
+    if (!loading && !user) {
+        const isPublicPage = !pathname.startsWith('/portal') && !pathname.startsWith('/professional');
         if (!isPublicPage) {
             router.push('/login');
         }
     }
   }, [user, loading, pathname, router]);
 
+
+  const signInWithGoogle = async (role: 'customer' | 'professional' = 'customer') => {
+      const provider = new GoogleAuthProvider();
+      sessionStorage.setItem('google_signup_role', role);
+      await signInWithRedirect(auth, provider);
+  };
+
   const logout = async () => {
     await signOut(auth);
+    setUser(null);
     setIsProfessional(false);
     router.push('/login');
   };
