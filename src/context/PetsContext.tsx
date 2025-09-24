@@ -93,7 +93,7 @@ const calculateAge = (birthDate: string): string => {
 const PetsContext = createContext<PetsContextType | undefined>(undefined);
 
 export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isProfessional, loading: authLoading } = useAuth();
   const [pets, setPets] = useState<PetWithAge[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -109,7 +109,7 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const petsCollection = collection(db, 'pets');
       let q;
 
-      if (user.email?.includes('vet')) {
+      if (isProfessional) {
           q = query(petsCollection); // Profissional vê todos os pets
       } else {
           q = query(petsCollection, where('tutorId', '==', user.uid)); // Cliente vê apenas os seus
@@ -145,7 +145,7 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         unsubscribe();
       }
     };
-  }, [user, authLoading]);
+  }, [user, isProfessional, authLoading]);
 
 
   const addPet = async (petData: AddPetData) => {
@@ -252,5 +252,3 @@ export const usePets = () => {
   }
   return context;
 };
-
-    

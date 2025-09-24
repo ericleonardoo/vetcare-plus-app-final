@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
@@ -26,7 +27,7 @@ type InventoryContextType = {
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
 export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isProfessional, loading: authLoading } = useAuth();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +36,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     let unsubscribe: Unsubscribe | undefined = undefined;
 
-    if (user && user.email?.includes('vet')) {
+    if (user && isProfessional) {
       setLoading(true);
       const inventoryCollection = collection(db, 'inventory');
       unsubscribe = onSnapshot(inventoryCollection, (querySnapshot) => {
@@ -59,27 +60,27 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
         unsubscribe();
       }
     };
-  }, [user, authLoading]);
+  }, [user, isProfessional, authLoading]);
 
   const addItem = async (item: Omit<InventoryItem, 'id'>) => {
-    if (!user || !user.email?.includes('vet')) throw new Error('Apenas profissionais podem gerenciar o estoque.');
+    if (!user || !isProfessional) throw new Error('Apenas profissionais podem gerenciar o estoque.');
     await addDoc(collection(db, 'inventory'), item);
   };
 
   const updateItem = async (id: string, item: Partial<Omit<InventoryItem, 'id'>>) => {
-    if (!user || !user.email?.includes('vet')) throw new Error('Apenas profissionais podem gerenciar o estoque.');
+    if (!user || !isProfessional) throw new Error('Apenas profissionais podem gerenciar o estoque.');
     const itemRef = doc(db, 'inventory', id);
     await updateDoc(itemRef, item);
   };
 
   const deleteItem = async (id: string) => {
-    if (!user || !user.email?.includes('vet')) throw new Error('Apenas profissionais podem gerenciar o estoque.');
+    if (!user || !isProfessional) throw new Error('Apenas profissionais podem gerenciar o estoque.');
     const itemRef = doc(db, 'inventory', id);
     await deleteDoc(itemRef);
   };
   
   const updateStock = async (itemsToUpdate: { id: string; quantity: number }[]) => {
-    if (!user || !user.email?.includes('vet')) throw new Error('Apenas profissionais podem gerenciar o estoque.');
+    if (!user || !isProfessional) throw new Error('Apenas profissionais podem gerenciar o estoque.');
 
     try {
         await runTransaction(db, async (transaction) => {

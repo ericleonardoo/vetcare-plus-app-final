@@ -30,7 +30,7 @@ type AppointmentsContextType = {
 const AppointmentsContext = createContext<AppointmentsContextType | undefined>(undefined);
 
 export const AppointmentsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isProfessional, loading: authLoading } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +48,7 @@ export const AppointmentsProvider: React.FC<{ children: ReactNode }> = ({ childr
         const appointmentsCollection = collection(db, 'appointments');
         let q;
 
-        if (user.email?.includes('+vet')) {
+        if (isProfessional) {
             // Profissional pode ver todos os agendamentos
             q = query(appointmentsCollection);
         } else {
@@ -80,7 +80,7 @@ export const AppointmentsProvider: React.FC<{ children: ReactNode }> = ({ childr
             unsubscribe();
         }
     };
-  }, [user, authLoading]);
+  }, [user, authLoading, isProfessional]);
 
 
   const addAppointment = async (appointmentData: Omit<Appointment, 'id'|'tutorId'| 'vet'>, vet?: string) => {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
@@ -16,7 +17,7 @@ type TutorsContextType = {
 const TutorsContext = createContext<TutorsContextType | undefined>(undefined);
 
 export const TutorsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isProfessional, loading: authLoading } = useAuth();
   const [tutors, setTutors] = useState<FullTutor[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,7 +28,7 @@ export const TutorsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     
     let unsubscribe: Unsubscribe | undefined = undefined;
     
-    if (user && user.email?.includes('vet')) {
+    if (user && isProfessional) {
       // Only professional users can load all tutors
       setLoading(true);
       const tutorsCollection = collection(db, 'tutors');
@@ -56,7 +57,7 @@ export const TutorsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         unsubscribe();
       }
     };
-  }, [user, authLoading]);
+  }, [user, isProfessional, authLoading]);
 
   return (
     <TutorsContext.Provider value={{ tutors, loading }}>
@@ -72,5 +73,3 @@ export const useTutors = () => {
   }
   return context;
 };
-
-    

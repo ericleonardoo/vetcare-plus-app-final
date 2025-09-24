@@ -40,7 +40,7 @@ type InvoicesContextType = {
 const InvoicesContext = createContext<InvoicesContextType | undefined>(undefined);
 
 export const InvoicesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isProfessional, loading: authLoading } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,7 +54,7 @@ export const InvoicesProvider: React.FC<{ children: ReactNode }> = ({ children }
         const invoicesCollection = collection(db, 'invoices');
         let q;
 
-        if (user.email?.includes('vet')) {
+        if (isProfessional) {
             // Profissional pode ver todas as faturas
             q = query(invoicesCollection);
         } else {
@@ -84,7 +84,7 @@ export const InvoicesProvider: React.FC<{ children: ReactNode }> = ({ children }
             unsubscribe();
         }
     };
-  }, [user, authLoading]);
+  }, [user, isProfessional, authLoading]);
 
 
   const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceId' | 'createdAt' | 'totalAmount'>) => {
@@ -106,7 +106,7 @@ export const InvoicesProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const updateInvoiceStatus = async (id: string, status: InvoiceStatus): Promise<InvoiceItem[]> => {
-    if (!user || !user.email?.includes('vet')) throw new Error("Apenas profissionais podem alterar o status.");
+    if (!user || !isProfessional) throw new Error("Apenas profissionais podem alterar o status.");
 
     const invoiceRef = doc(db, 'invoices', id);
     const invoiceToUpdate = invoices.find(inv => inv.id === id);
