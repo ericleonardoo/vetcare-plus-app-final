@@ -58,18 +58,27 @@ export default function CompleteProfilePage() {
     useEffect(() => {
         if (tutor) {
             form.reset({
-                name: tutor.name || '',
-                email: tutor.email || '',
+                name: tutor.name || user?.displayName || '',
+                email: tutor.email || user?.email || '',
                 phone: tutor.phone || '',
             });
+        } else if (user) {
+            // Fallback para dados do user se o tutor não estiver carregado ainda
+             form.reset({
+                name: user.displayName || '',
+                email: user.email || '',
+                phone: '',
+            });
         }
-    }, [tutor, form]);
+    }, [tutor, user, form]);
 
     const onSubmit = (data: ProfileFormValues) => {
         if (!user) {
             toast({ variant: 'destructive', title: "Erro", description: "Você precisa estar logado."});
             return;
         }
+
+        console.log("[CLIENT] Chamando updateUserProfile com userId:", user.uid);
 
         startTransition(async () => {
             const result = await updateUserProfile(user.uid, data);

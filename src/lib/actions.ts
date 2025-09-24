@@ -150,14 +150,15 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 
 export async function updateUserProfile(userId: string, data: ProfileFormValues) {
-    console.log(`[ACTION] Iniciando a atualização do perfil para o usuário: ${userId}`);
-    console.log("[ACTION] Dados recebidos:", data);
-
+    // Primeira camada de defesa: garantir que temos um userId
     if (!userId) {
-        console.error("[ACTION] ERRO: ID do usuário não fornecido.");
-        return { success: false, error: "Usuário não autenticado. ID ausente." };
+        console.error("[ACTION] Tentativa de atualizar perfil sem um userId!");
+        return { success: false, error: "Usuário não autenticado." };
     }
 
+    console.log(`[ACTION] Iniciando a atualização do perfil para o usuário: ${userId}`);
+    console.log("[ACTION] Dados recebidos:", data);
+    
     const validatedData = profileFormSchema.safeParse(data);
     if (!validatedData.success) {
         console.error("[ACTION] ERRO: Dados de perfil inválidos.", validatedData.error);
@@ -167,16 +168,19 @@ export async function updateUserProfile(userId: string, data: ProfileFormValues)
     try {
         const tutorRef = doc(db, 'tutors', userId);
         console.log("[ACTION] Tentando atualizar o documento em:", tutorRef.path);
-
+        
+        // Usamos setDoc com merge:true. Isso é mais seguro para perfis.
+        // Ele cria o documento se não existir, ou atualiza se já existir.
         await setDoc(tutorRef, validatedData.data, { merge: true });
         
-        console.log("[ACTION] Perfil atualizado com SUCESSO!");
+        console.log("[ACTION] Perfil atualizado/criado com SUCESSO!");
         revalidatePath('/portal/perfil');
         revalidatePath('/portal/dashboard');
 
         return { success: true, message: "Perfil atualizado com sucesso!" };
 
     } catch (error) {
+        // O PASSO MAIS IMPORTANTE DE TODOS!
         console.error("!!!!!!!!!! [ACTION] ERRO CRÍTICO AO ATUALIZAR O PERFIL !!!!!!!!!!", error);
         return { success: false, error: (error as Error).message };
     }
