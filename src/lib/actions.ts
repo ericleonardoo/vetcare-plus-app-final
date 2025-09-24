@@ -174,8 +174,9 @@ export async function updateUserProfile(userId: string, data: ProfileFormValues)
         await setDoc(tutorRef, validatedData.data, { merge: true });
         
         console.log("[ACTION] Perfil atualizado/criado com SUCESSO!");
-        revalidatePath('/portal/perfil');
+        
         revalidatePath('/portal/dashboard');
+        revalidatePath('/portal/perfil');
 
         return { success: true, message: "Perfil atualizado com sucesso!" };
 

@@ -73,15 +73,20 @@ export default function CompleteProfilePage() {
     }, [tutor, user, form]);
 
     const onSubmit = (data: ProfileFormValues) => {
+        // GARANTIA: Verificamos se o usuário do contexto existe
         if (!user) {
-            toast({ variant: 'destructive', title: "Erro", description: "Você precisa estar logado."});
+            console.error("Tentativa de salvar perfil sem usuário logado!");
+            toast({ variant: "destructive", title: "Erro", description: "Usuário não encontrado. Por favor, faça o login novamente." });
             return;
         }
 
-        console.log("[CLIENT] Chamando updateUserProfile com userId:", user.uid);
+        // A CORREÇÃO: Usamos 'user.uid' diretamente do contexto.
+        const userId = user.uid;
+        console.log(`[CLIENT] CONFIRMADO: Enviando atualização para o userId CORRETO: ${userId}`);
 
         startTransition(async () => {
-            const result = await updateUserProfile(user.uid, data);
+            const result = await updateUserProfile(userId, data);
+            
             if(result.success) {
                 updateTutor(data); // Atualiza o contexto localmente para feedback instantâneo
                 toast({
