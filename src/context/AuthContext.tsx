@@ -29,20 +29,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log("[AUTH LISTENER] Configurando o onAuthStateChanged...");
-
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        setUser(currentUser); // Define o usuário imediatamente
+
         if (currentUser) {
-            console.log("[AUTH LISTENER] Usuário detectado:", currentUser.uid);
-            
             const userDocRef = doc(db, 'tutors', currentUser.uid);
             const userDoc = await getDoc(userDocRef);
             
             if (userDoc.exists()) {
                 const userData = userDoc.data();
-                console.log("[FIRESTORE] Documento do usuário já existe.");
                 const professionalStatus = userData.role === 'professional';
                 setIsProfessional(professionalStatus);
+                
                 const isProfileComplete = userData.phone && userData.phone.trim() !== '';
                 const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro');
                 
@@ -52,29 +50,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                   router.push(professionalStatus ? '/professional/dashboard' : '/portal/dashboard');
                 }
             }
-            setUser(currentUser);
+            // Se o doc não existe, o fluxo de `signInWithGoogle` criará e o listener será reativado.
         } else {
-            console.log("[AUTH LISTENER] Nenhum usuário detectado.");
-            setUser(null);
             setIsProfessional(false);
         }
         setLoading(false);
     });
 
-    // Limpeza do listener quando o componente for desmontado
     return () => unsubscribe();
-  }, [pathname, router]); // Adicionado pathname e router para estabilidade
+  }, [pathname, router]);
 
 
   const signInWithGoogle = async (role: 'customer' | 'professional' = 'customer') => {
     const provider = new GoogleAuthProvider();
     try {
-        console.log("[AUTH] Iniciando signInWithPopup...");
         const result = await signInWithPopup(auth, provider);
-        console.log("[AUTH] signInWithPopup concluído com SUCESSO. Resultado:", result);
-
         const user = result.user;
-        console.log("[AUTH] Objeto de usuário do Firebase:", user);
         
         const userDocRef = doc(db, 'tutors', user.uid);
         const userDoc = await getDoc(userDocRef);
@@ -86,15 +77,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 phone: user.phoneNumber || '',
                 role: role,
             });
-             console.log("[FIRESTORE] Novo documento de usuário criado com a role:", role);
-        } else {
-            console.log("[FIRESTORE] Documento do usuário já existente, login normal.");
         }
         
+        // A lógica de redirecionamento já é tratada pelo useEffect listener.
         toast({ title: "Login realizado com sucesso!" });
 
     } catch (error) {
-        console.error("!!!!!!!!!! [AUTH] ERRO CRÍTICO NO FLUXO DE LOGIN !!!!!!!!!!", error);
+        console.error("Erro no fluxo de login com Google:", error);
         toast({ variant: "destructive", title: "Erro ao fazer login.", description: "Por favor, tente novamente." });
     }
   };
@@ -126,4 +115,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
