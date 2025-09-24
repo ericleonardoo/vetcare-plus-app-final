@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import Chatbot from '@/components/vetcare/Chatbot';
 import { AuthProvider } from '@/context/AuthContext';
+import { TutorProvider } from '@/context/TutorContext';
 
 export const metadata: Metadata = {
   title: 'VetCare+',
@@ -27,9 +28,11 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased font-normal">
         <AuthProvider>
-          {children}
-          <Chatbot />
-          <Toaster />
+          <TutorProvider>
+            {children}
+            <Chatbot />
+            <Toaster />
+          </TutorProvider>
         </AuthProvider>
       </body>
     </html>
