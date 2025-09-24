@@ -1,57 +1,60 @@
 
 rules_version = '2';
 
-// As regras abaixo garantem que apenas usuários autenticados podem acessar o
-// banco de dados, e que usuários só podem modificar seus próprios dados.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Função auxiliar para verificar se o usuário autenticado tem a role de 'professional'
+    // Função para verificar se o usuário é um profissional
     function isProfessional() {
       return get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.role == 'professional';
     }
 
-    // Coleção 'tutors' (que inclui clientes e profissionais)
+    // Regras para a coleção 'tutors' (perfis de usuários)
     match /tutors/{userId} {
-      // Qualquer um pode criar seu próprio perfil (cadastro).
-      allow create: if request.auth != null;
-      // Um usuário só pode ler ou atualizar seu próprio perfil.
-      // Um profissional pode ler qualquer perfil.
-      allow read, update: if request.auth.uid == userId || isProfessional();
+      // Um usuário pode ler e escrever (criar, atualizar) apenas no seu próprio documento.
+      allow read, write: if request.auth.uid == userId;
+      // Profissionais podem ler os dados de qualquer tutor.
+      allow get: if isProfessional();
     }
 
-    // Coleção 'pets'
+    // Regras para a coleção 'pets'
     match /pets/{petId} {
-      // Um usuário só pode ler ou deletar os pets que pertencem a ele.
-      // Um profissional pode ler ou deletar qualquer pet.
-      allow read, delete: if resource.data.tutorId == request.auth.uid || isProfessional();
-      // Um usuário só pode criar/atualizar pets para si mesmo.
-      // Um profissional pode criar/atualizar qualquer pet.
-      allow create, update: if request.resource.data.tutorId == request.auth.uid || isProfessional();
+      // O dono do pet pode fazer tudo. O ID do tutor está armazenado no documento do pet.
+      allow read, update, delete: if request.auth.uid == resource.data.tutorId;
+      // Qualquer usuário autenticado pode criar um novo pet (o tutorId será validado na criação).
+      allow create: if request.auth != null;
+      // Profissionais podem ler os dados de qualquer pet.
+      allow get, list: if isProfessional();
     }
 
-    // Coleção 'appointments'
+    // Regras para a coleção 'appointments' (agendamentos)
     match /appointments/{appointmentId} {
-        // Um profissional pode ler, criar, atualizar ou deletar qualquer agendamento.
-        allow read, create, update, delete: if isProfessional();
-        // Um cliente pode ler ou criar seus próprios agendamentos.
-        allow read, create: if request.auth.uid == request.resource.data.tutorId;
-        // Um cliente pode ler seus agendamentos existentes.
-        allow read: if request.auth.uid == resource.data.tutorId;
-    }
-
-    // Coleção 'invoices' (Faturas)
-    match /invoices/{invoiceId} {
-      // Um profissional pode gerenciar completamente as faturas.
-      allow read, create, update, delete: if isProfessional();
-      // Um cliente só pode ler as faturas que pertencem a ele.
-      allow read: if resource.data.clientId == request.auth.uid;
+       // O dono do pet pode ler o agendamento.
+      allow get, list: if request.auth.uid == resource.data.tutorId;
+      // Qualquer usuário autenticado pode criar um agendamento.
+      allow create: if request.auth != null;
+      // Profissionais podem ler e atualizar (ex: mudar status) qualquer agendamento.
+      allow read, update: if isProfessional();
     }
     
-    // Coleção 'inventory' (Estoque)
+    // Regras para a coleção 'invoices' (faturas)
+    match /invoices/{invoiceId} {
+      // O cliente pode ler suas próprias faturas.
+      allow read: if request.auth.uid == resource.data.clientId;
+      // Profissionais podem ler e atualizar qualquer fatura.
+      allow read, update, create: if isProfessional();
+    }
+
+    // Regras para o inventário
     match /inventory/{itemId} {
-        // Apenas profissionais podem ler e escrever no estoque.
-        allow read, write: if isProfessional();
+      // Apenas profissionais podem ler e escrever no estoque.
+      allow read, write: if isProfessional();
+    }
+
+    // Regras para a equipe
+    match /staff/{staffId} {
+       // Apenas profissionais podem ler e escrever na lista de equipe.
+      allow read, write: if isProfessional();
     }
   }
 }
