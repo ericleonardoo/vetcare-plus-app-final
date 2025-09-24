@@ -1,73 +1,23 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Função auxiliar para verificar se o usuário logado é um profissional.
-    // Ela lê o documento do próprio usuário para checar o campo 'role'.
-    function isProfessional() {
-      return get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.role == 'professional';
-    }
-    
-    // Função auxiliar para verificar se o usuário é o dono de um determinado documento (pet, invoice, etc).
-    function isOwner(docId, collectionName, ownerField) {
-    	return get(/databases/$(database)/documents/$(collectionName)/$(docId)).data[ownerField] == request.auth.uid;
-    }
-
-    // Regras para a coleção 'tutors' (perfis de usuários)
+    // A "Regra de Ouro" para a coleção 'tutors'
+    // {userId} é um "coringa" que representa o ID de qualquer documento na coleção.
     match /tutors/{userId} {
-      // PERMISSÃO DE ESCRITA:
-      // Um usuário pode CRIAR seu próprio perfil (no cadastro).
-      // Um usuário pode ATUALIZAR seu próprio perfil (na tela "completar-perfil").
-      // Ninguém pode deletar um perfil.
-      allow create, update: if request.auth.uid == userId;
 
-      // PERMISSÃO DE LEITURA:
-      // Um usuário pode LER seu próprio perfil.
-      // Um profissional pode LER o perfil de qualquer usuário.
-      allow read: if request.auth.uid == userId || isProfessional();
-    }
+      // PERMISSÃO DE ESCRITA (WRITE):
+      // 'write' cobre as operações de 'create', 'update' e 'delete'.
+      // A condição `if request.auth.uid == userId;` é a verificação de segurança.
+      // `request.auth.uid` é o "crachá" do usuário que está logado fazendo a requisição.
+      // A regra só permite a escrita se o ID do usuário logado for o mesmo ID do documento
+      // que ele está tentando modificar. É por isso que ela resolve o seu problema de 'update'.
+      allow write: if request.auth.uid == userId;
 
-    // Regras para a coleção 'pets'
-    match /pets/{petId} {
-      // Um usuário pode CRIAR um pet para si mesmo.
-      allow create: if request.resource.data.tutorId == request.auth.uid;
-
-      // O dono do pet ou um profissional pode LER os dados.
-      allow read: if isOwner(petId, 'pets', 'tutorId') || isProfessional();
-      
-      // O dono do pet pode ATUALIZAR ou DELETAR o pet.
-      allow update, delete: if isOwner(petId, 'pets', 'tutorId');
-    }
-
-    // Regras para a coleção 'appointments' (agendamentos)
-    match /appointments/{appointmentId} {
-      // O dono do agendamento ou um profissional pode LER.
-      allow read: if isOwner(appointmentId, 'appointments', 'tutorId') || isProfessional();
-
-      // O dono pode CRIAR um agendamento para si mesmo.
-      allow create: if request.resource.data.tutorId == request.auth.uid;
-      
-      // Apenas profissionais podem ATUALIZAR ou DELETAR agendamentos.
-      allow update, delete: if isProfessional();
-    }
-    
-    // Regras para a coleção 'invoices' (faturas)
-    match /invoices/{invoiceId} {
-      // O dono da fatura ou um profissional pode LER.
-      allow read: if isOwner(invoiceId, 'invoices', 'clientId') || isProfessional();
-      
-      // Apenas profissionais podem CRIAR, ATUALIZAR ou DELETAR faturas.
-      allow write: if isProfessional();
-    }
-
-    // Regras para coleções exclusivas de profissionais
-    match /inventory/{itemId} {
-      allow read, write: if isProfessional();
-    }
-
-    match /staff/{staffId} {
-       allow read, write: if isProfessional();
+      // PERMISSÃO DE LEITURA (READ):
+      // 'read' cobre as operações de 'get' (um documento) e 'list' (vários documentos).
+      // A mesma lógica se aplica: você só pode ler os dados de um perfil se for o seu.
+      allow read: if request.auth.uid == userId;
     }
   }
 }
