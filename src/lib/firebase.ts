@@ -22,8 +22,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Força a persistência da sessão para garantir que o estado de login não se perca durante os redirecionamentos.
-setPersistence(auth, browserSessionPersistence)
+
+// O GUARDIÃO: Uma promessa que representa a conclusão da configuração de persistência.
+export const persistencePromise = setPersistence(auth, browserSessionPersistence)
   .then(() => {
     console.log("[AUTH PERSISTENCE] Persistência da sessão configurada com sucesso.");
   })
