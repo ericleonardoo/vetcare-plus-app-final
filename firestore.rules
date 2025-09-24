@@ -1,23 +1,92 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+  
+    // =================================
+    // Funções Auxiliares
+    // =================================
+    
+    // Função para verificar se o ID do usuário que faz a requisição corresponde
+    // ao dono do documento.
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
 
-    // A "Regra de Ouro" para a coleção 'tutors'
-    // {userId} é um "coringa" que representa o ID de qualquer documento na coleção.
+    // Função para verificar se o usuário autenticado tem a role 'professional'.
+    // Faz uma leitura no perfil do próprio usuário que está fazendo a requisição.
+    function isProfessional() {
+      return get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.role == 'professional';
+    }
+
+    // =================================
+    // Regras por Coleção
+    // =================================
+
+    // Coleção de perfis de usuários (tutores)
     match /tutors/{userId} {
+      // LEITURA:
+      // Permite a leitura se:
+      // 1. O usuário for o dono do perfil.
+      // 2. OU o usuário for um profissional.
+      allow read: if isOwner(userId) || isProfessional();
 
-      // PERMISSÃO DE ESCRITA (WRITE):
-      // 'write' cobre as operações de 'create', 'update' e 'delete'.
-      // A condição `if request.auth.uid == userId;` é a verificação de segurança.
-      // `request.auth.uid` é o "crachá" do usuário que está logado fazendo a requisição.
-      // A regra só permite a escrita se o ID do usuário logado for o mesmo ID do documento
-      // que ele está tentando modificar. É por isso que ela resolve o seu problema de 'update'.
-      allow write: if request.auth.uid == userId;
+      // ESCRITA (Criar, Atualizar, Deletar):
+      // Permite a escrita APENAS se o usuário for o dono do perfil.
+      // Isso resolve o problema de 'completar-perfil'.
+      allow write: if isOwner(userId);
+    }
 
-      // PERMISSÃO DE LEITURA (READ):
-      // 'read' cobre as operações de 'get' (um documento) e 'list' (vários documentos).
-      // A mesma lógica se aplica: você só pode ler os dados de um perfil se for o seu.
-      allow read: if request.auth.uid == userId;
+    // Coleção de pets
+    match /pets/{petId} {
+      // LEITURA:
+      // Permite a leitura se:
+      // 1. O usuário for um profissional.
+      // 2. OU o usuário for o tutor do pet (verificado pelo campo 'tutorId' no doc do pet).
+      allow read: if isProfessional() || isOwner(get(/databases/$(database)/documents/pets/$(petId)).data.tutorId);
+
+      // ESCRITA:
+      // O tutor pode criar, atualizar e deletar seus próprios pets.
+      allow write: if isOwner(request.resource.data.tutorId);
+    }
+    
+    // Coleção de agendamentos
+    match /appointments/{appointmentId} {
+      // LEITURA:
+      // Permite a leitura se:
+      // 1. O usuário for um profissional.
+      // 2. OU o usuário for o tutor associado ao agendamento.
+      allow read: if isProfessional() || isOwner(get(/databases/$(database)/documents/appointments/$(appointmentId)).data.tutorId);
+      
+      // ESCRITA:
+      // O profissional pode criar, atualizar e deletar.
+      // O tutor pode apenas criar seu próprio agendamento.
+      allow create: if isProfessional() || isOwner(request.resource.data.tutorId);
+      allow update, delete: if isProfessional();
+    }
+    
+    // Coleção de faturas
+    match /invoices/{invoiceId} {
+      // LEITURA:
+      // Permite a leitura se:
+      // 1. O usuário for um profissional.
+      // 2. OU o usuário for o cliente da fatura.
+      allow read: if isProfessional() || isOwner(get(/databases/$(database)/documents/invoices/$(invoiceId)).data.clientId);
+      
+      // ESCRITA (Apenas profissionais podem criar/atualizar faturas).
+      allow write: if isProfessional();
+    }
+
+    // Coleção de estoque
+    match /inventory/{itemId} {
+      // Apenas profissionais podem ler e escrever no estoque.
+      allow read, write: if isProfessional();
+    }
+
+    // Coleção da equipe
+    match /staff/{staffId} {
+       // Apenas profissionais podem ler e escrever na lista de equipe.
+      allow read, write: if isProfessional();
     }
   }
 }
