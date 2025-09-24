@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -29,77 +29,76 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { toast } = useToast();
 
   useEffect(() => {
-    const checkAuth = async () => {
-        try {
-            console.log("[REDIRECT] Verificando resultado do redirecionamento...");
-            const result = await getRedirectResult(auth);
-            if (result) {
-                console.log("[REDIRECT] Resultado obtido com SUCESSO!", result.user.uid);
-                const userDocRef = doc(db, 'tutors', result.user.uid);
-                const userDoc = await getDoc(userDocRef);
+    console.log("[AUTH LISTENER] Configurando o onAuthStateChanged...");
 
-                if (!userDoc.exists()) {
-                    const role = sessionStorage.getItem('googleAuthRole') || 'customer';
-                    sessionStorage.removeItem('googleAuthRole');
-                    await setDoc(userDocRef, {
-                        name: result.user.displayName,
-                        email: result.user.email,
-                        phone: result.user.phoneNumber || '',
-                        role: role,
-                    });
-                }
-            }
-        } catch (error) {
-            console.error("[REDIRECT] Erro ao processar redirect:", error);
-        }
-
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-           console.log("[AUTH LISTENER] Listener disparado.");
-          if (currentUser) {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        if (currentUser) {
             console.log("[AUTH LISTENER] Usuário detectado:", currentUser.uid);
-            setUser(currentUser);
             
             const userDocRef = doc(db, 'tutors', currentUser.uid);
             const userDoc = await getDoc(userDocRef);
-            let userData;
             
             if (userDoc.exists()) {
-                userData = userDoc.data();
+                const userData = userDoc.data();
                 console.log("[FIRESTORE] Documento do usuário já existe.");
-                 setIsProfessional(userData.role === 'professional');
+                const professionalStatus = userData.role === 'professional';
+                setIsProfessional(professionalStatus);
                 const isProfileComplete = userData.phone && userData.phone.trim() !== '';
-                const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro') || pathname === '/test-login';
+                const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro');
                 
                 if (!isProfileComplete && !pathname.endsWith('/completar-perfil')) {
                   router.push('/cadastro/completar-perfil');
                 } else if (isProfileComplete && (isAuthPage || pathname === '/')) {
-                  router.push(userData.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard');
+                  router.push(professionalStatus ? '/professional/dashboard' : '/portal/dashboard');
                 }
             }
-          } else {
+            setUser(currentUser);
+        } else {
             console.log("[AUTH LISTENER] Nenhum usuário detectado.");
             setUser(null);
             setIsProfessional(false);
-          }
-          setLoading(false);
-        });
+        }
+        setLoading(false);
+    });
 
-        return () => {
-            console.log("[AUTH CONTEXT] Limpando listener.");
-            unsubscribe();
-        };
-    };
-
-    checkAuth();
-  }, [pathname, router]); 
+    // Limpeza do listener quando o componente for desmontado
+    return () => unsubscribe();
+  }, [pathname, router]); // Adicionado pathname e router para estabilidade
 
 
   const signInWithGoogle = async (role: 'customer' | 'professional' = 'customer') => {
-      const provider = new GoogleAuthProvider();
-      console.log("[AUTH] Iniciando signInWithRedirect...");
-      sessionStorage.setItem('googleAuthRole', role);
-      await signInWithRedirect(auth, provider);
+    const provider = new GoogleAuthProvider();
+    try {
+        console.log("[AUTH] Iniciando signInWithPopup...");
+        const result = await signInWithPopup(auth, provider);
+        console.log("[AUTH] signInWithPopup concluído com SUCESSO. Resultado:", result);
+
+        const user = result.user;
+        console.log("[AUTH] Objeto de usuário do Firebase:", user);
+        
+        const userDocRef = doc(db, 'tutors', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+            await setDoc(userDocRef, {
+                name: user.displayName,
+                email: user.email,
+                phone: user.phoneNumber || '',
+                role: role,
+            });
+             console.log("[FIRESTORE] Novo documento de usuário criado com a role:", role);
+        } else {
+            console.log("[FIRESTORE] Documento do usuário já existente, login normal.");
+        }
+        
+        toast({ title: "Login realizado com sucesso!" });
+
+    } catch (error) {
+        console.error("!!!!!!!!!! [AUTH] ERRO CRÍTICO NO FLUXO DE LOGIN !!!!!!!!!!", error);
+        toast({ variant: "destructive", title: "Erro ao fazer login.", description: "Por favor, tente novamente." });
+    }
   };
+
 
   const logout = async () => {
     await signOut(auth);
@@ -127,3 +126,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
