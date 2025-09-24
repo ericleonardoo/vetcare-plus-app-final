@@ -1,4 +1,3 @@
-
 'use server';
 
 import { suggestAppointmentTimes as suggestAppointmentTimesFlow } from "@/ai/flows/suggest-appointment-times";
@@ -136,55 +135,4 @@ export async function getNotifications() {
 export async function clearAllNotifications() {
     await clearNotificationsTool();
     return { success: true };
-}
-
-
-// Ações do Perfil do Tutor com Firestore
-const profileUpdateSchema = z.object({
-    name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres.").optional(),
-    phone: z.string().min(10, "Por favor, insira um número de telefone válido.").optional(),
-});
-
-type ProfileUpdateValues = z.infer<typeof profileUpdateSchema>;
-
-export async function updateUserProfile(userId: string, data: ProfileUpdateValues) {
-    if (!userId) {
-        console.error("[ACTION] Tentativa de atualizar perfil sem um userId!");
-        return { success: false, error: "Usuário não autenticado." };
-    }
-
-    console.log(`[ACTION] Iniciando a atualização do perfil para o usuário: ${userId}`);
-    console.log("[ACTION] Dados recebidos:", data);
-    
-    const validatedData = profileUpdateSchema.safeParse(data);
-    if (!validatedData.success) {
-        console.error("[ACTION] ERRO: Dados de perfil inválidos.", validatedData.error);
-        return { success: false, error: "Os dados fornecidos são inválidos." };
-    }
-    
-    try {
-        const tutorRef = doc(db, 'tutors', userId);
-        console.log("[ACTION] Tentando atualizar o documento em:", tutorRef.path);
-
-        // Prepara os dados para atualização, garantindo que o profileCompleted seja setado.
-        const dataToUpdate = {
-            ...validatedData.data,
-            profileCompleted: true,
-        };
-        
-        await setDoc(tutorRef, dataToUpdate, { merge: true });
-        
-        console.log("[ACTION] Perfil atualizado/criado com SUCESSO!");
-        
-        revalidatePath('/portal/dashboard');
-        revalidatePath('/portal/perfil');
-        revalidatePath('/cadastro/completar-perfil');
-
-
-        return { success: true, message: "Perfil atualizado com sucesso!" };
-
-    } catch (error) {
-        console.error("!!!!!!!!!! [ACTION] ERRO CRÍTICO AO ATUALIZAR O PERFIL !!!!!!!!!!", error);
-        return { success: false, error: (error as Error).message };
-    }
 }

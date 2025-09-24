@@ -3,10 +3,10 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { updateUserProfile } from '@/lib/actions';
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast";
 import Link from 'next/link';
 import { PawPrint, Loader2 } from 'lucide-react';
+import { updateUserProfileOnClient } from '@/lib/tutor';
 
 
 // Componentes da sua UI
@@ -63,21 +63,27 @@ export default function CompletarPerfilPage() {
 
     console.log(`[CLIENT] PREPARANDO PARA CHAMAR A ACTION. Fonte da Verdade (user.uid): ${userId}`);
     startTransition(async () => {
-        const result = await updateUserProfile(userId, { name, email: user.email!, phone });
+      try {
+        // CHAMA A NOVA FUNÇÃO DO LADO DO CLIENTE
+        await updateUserProfileOnClient(userId, { name, phone });
 
-        if (result.success) {
         toast({
-            title: "Sucesso!",
-            description: "Seu perfil foi salvo. Redirecionando...",
+          title: "Sucesso!",
+          description: "Seu perfil foi salvo. Redirecionando...",
         });
-        // O AuthContext vai detectar o perfil completo e redirecionar
-        } else {
+
+        // A lógica de redirecionamento do AuthGuard vai te tirar daqui
+        // Mas podemos forçar para uma melhor UX
+        router.push('/portal/dashboard');
+
+      } catch (error) {
+        console.error("Erro ao atualizar perfil no cliente:", error);
         toast({
-            variant: "destructive",
-            title: "Erro ao atualizar",
-            description: result.error || "Ocorreu um erro desconhecido ao salvar.",
+          variant: "destructive",
+          title: "Erro ao atualizar",
+          description: "Não foi possível salvar suas informações. Verifique suas Regras do Firestore.",
         });
-        }
+      }
     });
   };
 
