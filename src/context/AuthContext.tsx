@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithPopup, getRedirectResult } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -30,112 +30,101 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     console.log("[AUTH LISTENER] Configurando o onAuthStateChanged...");
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setLoading(true); // Sempre começa como loading ao detectar mudança
-      if (user) {
-        console.log("[AUTH LISTENER] Usuário detectado:", user.uid);
-        setUser(user); // Define o usuário primeiro
-        await handleUserSession(user); // Processa e redireciona DEPOIS
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser); // Define o usuário imediatamente
+      
+      if (currentUser) {
+        console.log("[AUTH LISTENER] Usuário detectado:", currentUser.uid);
+        await handleUserSession(currentUser);
       } else {
         console.log("[AUTH LISTENER] Nenhum usuário detectado.");
-        setUser(null);
         setIsProfessional(false);
-        
-        // Se não houver usuário, verifica se a rota é protegida
-        const isProtectedRoute = pathname.startsWith('/portal') || pathname.startsWith('/professional');
-        if (isProtectedRoute) {
-            console.log("[AUTH GUARD] Usuário deslogado em rota protegida. Redirecionando para /login.");
+        setLoading(false);
+        // A guarda de rota para redirecionar para /login se estiver em /portal ou /professional
+        if (pathname.startsWith('/portal') || pathname.startsWith('/professional')) {
             router.push('/login');
         }
-        setLoading(false);
       }
     });
+    
+    // Processa o resultado do redirecionamento do Google
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result) {
+          console.log("[AUTH] getRedirectResult concluído com SUCESSO. Resultado:", result);
+          await handleUserSession(result.user);
+        }
+      })
+      .catch((error) => {
+        console.error("!!!!!!!!!! [AUTH] ERRO CRÍTICO NO getRedirectResult !!!!!!!!!!", error);
+        toast({
+          variant: "destructive",
+          title: "Erro de Autenticação",
+          description: `Não foi possível completar o login. (${error.code || error.message})`
+        });
+      });
+
     return () => {
-        console.log("[AUTH LISTENER] Limpando o onAuthStateChanged.");
-        unsubscribe();
+      console.log("[AUTH LISTENER] Limpando o onAuthStateChanged.");
+      unsubscribe();
     };
-  }, [pathname, router]); // Adicionado pathname e router para reavaliar a guarda de rota se necessário
+  }, []);
 
   const handleUserSession = async (user: User) => {
+    setLoading(true);
     console.log("[HANDLE SESSION] Verificando documento para o usuário:", user.uid);
+    
     const userDocRef = doc(db, 'tutors', user.uid);
     const userDoc = await getDoc(userDocRef);
 
-    if (userDoc.exists()) {
-        const userData = userDoc.data();
-        console.log("[HANDLE SESSION] Documento do usuário encontrado:", userData);
-        setIsProfessional(userData.role === 'professional');
+    let userData;
+    const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro');
 
-        const isProfileComplete = userData.phone && userData.phone.trim() !== '';
-        const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro') || pathname === '/test-login';
-        
-        console.log(`[HANDLE SESSION] Redirecionando... isProfileComplete: ${isProfileComplete}, isAuthPage: ${isAuthPage}, role: ${userData.role}`);
-        
-        if (!isProfileComplete && pathname !== '/cadastro/completar-perfil') {
-            router.push('/cadastro/completar-perfil');
-        } else if (isProfileComplete && (isAuthPage || pathname === '/')) {
-             router.push(userData.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard');
-        }
+    if (!userDoc.exists()) {
+      console.log("[FIRESTORE] Documento não existe. Criando novo documento...");
+      // Recupera o papel da sessão se ele foi salvo antes do redirecionamento
+      const role = sessionStorage.getItem('googleAuthRole') || 'customer';
+      sessionStorage.removeItem('googleAuthRole'); // Limpa o item da sessão
+
+      userData = {
+        name: user.displayName,
+        email: user.email,
+        phone: user.phoneNumber || '',
+        role: role,
+      };
+      await setDoc(userDocRef, userData);
+      console.log("[FIRESTORE] Documento do usuário criado com sucesso.");
     } else {
-      console.warn("[HANDLE SESSION] Documento do usuário NÃO encontrado. Isso pode acontecer durante o primeiro login.");
-      // Se o documento não existe, a função `signInWithGoogle` cuidará da criação.
-      // O `onAuthStateChanged` será acionado novamente após a criação, se necessário.
+      userData = userDoc.data();
+      console.log("[FIRESTORE] Documento do usuário já existe:", userData);
     }
-    setLoading(false); // Finaliza o loading após o processamento
+    
+    setIsProfessional(userData.role === 'professional');
+    
+    const isProfileComplete = userData.phone && userData.phone.trim() !== '';
+
+    console.log(`[HANDLE SESSION] Redirecionando... isProfileComplete: ${isProfileComplete}, isAuthPage: ${isAuthPage}, role: ${userData.role}, pathname: ${pathname}`);
+
+    if (!isProfileComplete && pathname !== '/cadastro/completar-perfil') {
+        router.push('/cadastro/completar-perfil');
+    } else if (isProfileComplete && (isAuthPage || pathname === '/')) {
+        router.push(userData.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard');
+    }
+    
+    setLoading(false);
   };
 
 
   const signInWithGoogle = async (role: 'customer' | 'professional' = 'customer') => {
       const provider = new GoogleAuthProvider();
-      
-      try {
-        console.log("[AUTH] Iniciando signInWithPopup...");
-        const result = await signInWithPopup(auth, provider);
-        console.log("[AUTH] signInWithPopup concluído com SUCESSO. Resultado:", result);
-
-        const user = result.user;
-        console.log("[AUTH] Objeto de usuário do Firebase:", user);
-        console.log("[AUTH] UID do usuário:", user.uid);
-
-        console.log("[FIRESTORE] Verificando/criando documento para o usuário...");
-        const userDocRef = doc(db, "tutors", user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (!userDoc.exists()) {
-            console.log("[FIRESTORE] Documento não existe. Criando novo documento...");
-            await setDoc(userDocRef, {
-                name: user.displayName,
-                email: user.email,
-                phone: user.phoneNumber || '',
-                role: role,
-            });
-            console.log("[FIRESTORE] Documento do usuário criado com sucesso.");
-        } else {
-             console.log("[FIRESTORE] Documento do usuário já existe.");
-        }
-        
-        toast({ title: "Bem-vindo!", description: "Login realizado com sucesso." });
-        // Agora, o onAuthStateChanged que já está escutando vai pegar esse novo usuário
-        // e chamar handleUserSession para fazer o redirecionamento correto.
-        // Não precisamos de um `router.push` aqui.
-
-      } catch (error: any) {
-          console.error("!!!!!!!!!! [AUTH] ERRO CRÍTICO NO FLUXO DE LOGIN !!!!!!!!!!", error);
-          toast({
-            variant: "destructive",
-            title: "Ocorreu um erro inesperado.",
-            description: `Não foi possível completar seu login. (${error.code || error.message})`
-          });
-          throw error; // Lança o erro para a página que chamou poder tratar
-      }
+      console.log("[AUTH] Iniciando signInWithRedirect...");
+      // Salva o 'role' na sessão para recuperá-lo após o redirecionamento
+      sessionStorage.setItem('googleAuthRole', role);
+      await signInWithRedirect(auth, provider);
   };
 
   const logout = async () => {
     await signOut(auth);
-    // Limpeza de estado local
-    setUser(null);
-    setIsProfessional(false);
-    // O onAuthStateChanged vai detectar a ausência de usuário e redirecionar se necessário.
     router.push('/');
   };
 
