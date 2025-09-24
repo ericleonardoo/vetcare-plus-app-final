@@ -25,7 +25,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { updateUserProfile } from '@/lib/actions';
+import { updateUserProfileOnClient } from '@/lib/tutor';
 import { useTutor } from '@/context/TutorContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -70,18 +70,18 @@ export default function ProfilePage() {
         }
 
         startTransition(async () => {
-            const result = await updateUserProfile(user.uid, data);
-            if(result.success) {
+            try {
+                await updateUserProfileOnClient(user.uid, { name: data.name, phone: data.phone });
                 updateTutor(data); // Atualiza o contexto localmente para feedback instantâneo
                 toast({
                     title: "Sucesso!",
-                    description: result.message,
+                    description: "Seu perfil foi atualizado.",
                 });
-            } else {
+            } catch (error) {
                  toast({
                     variant: 'destructive',
-                    title: "Erro",
-                    description: result.error,
+                    title: "Erro ao atualizar",
+                    description: "Não foi possível salvar suas informações.",
                 });
             }
         });
