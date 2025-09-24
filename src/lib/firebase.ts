@@ -1,7 +1,7 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserSessionPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -21,5 +21,15 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+
+// Força a persistência da sessão para garantir que o estado de login não se perca durante os redirecionamentos.
+setPersistence(auth, browserSessionPersistence)
+  .then(() => {
+    console.log("[AUTH PERSISTENCE] Persistência da sessão configurada com sucesso.");
+  })
+  .catch((error) => {
+    console.error("[AUTH PERSISTENCE] Erro ao configurar a persistência:", error);
+  });
+
 
 export { app, auth, db, storage };
