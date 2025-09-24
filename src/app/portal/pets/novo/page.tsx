@@ -34,8 +34,9 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { usePets } from '@/context/PetsContext';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef } from 'react';
 import { Label } from '@/components/ui/label';
+import Image from 'next/image';
 
 const petFormSchema = z.object({
   name: z.string().min(2, { message: "O nome é obrigatório." }),
@@ -44,6 +45,7 @@ const petFormSchema = z.object({
   birthDate: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Data inválida." }),
   gender: z.string({ required_error: "Selecione o gênero." }),
   notes: z.string().optional(),
+  avatarFile: z.instanceof(File).optional(),
 });
 
 type PetFormValues = z.infer<typeof petFormSchema>;
@@ -53,6 +55,9 @@ export default function NewPetPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const form = useForm<PetFormValues>({
     resolver: zodResolver(petFormSchema),
@@ -63,15 +68,26 @@ export default function NewPetPage() {
     },
   });
 
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      form.setValue('avatarFile', file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   function onSubmit(data: PetFormValues) {
     startTransition(async () => {
         try {
-            const newPetPayload = {
-                ...data,
-                avatarUrl: `https://picsum.photos/seed/${data.name}/200/200`,
-                avatarHint: `${data.species} ${data.breed}`,
-            };
-            await addPet(newPetPayload);
+            await addPet(data);
             toast({
               title: "Pet Adicionado!",
               description: `${data.name} agora faz parte da sua família VetCare+.`,
@@ -110,11 +126,27 @@ export default function NewPetPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="flex flex-col items-center gap-4">
-                <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center cursor-pointer hover:bg-secondary">
-                  <Camera className="w-12 h-12 text-muted-foreground" />
-                  <Input type="file" className="hidden" id="pet-avatar" />
+                 <div
+                  className="w-32 h-32 rounded-full bg-muted flex items-center justify-center cursor-pointer hover:bg-secondary relative overflow-hidden"
+                  onClick={triggerFileInput}
+                >
+                  {avatarPreview ? (
+                    <Image src={avatarPreview} alt="Pré-visualização do avatar" layout="fill" objectFit="cover" />
+                  ) : (
+                    <Camera className="w-12 h-12 text-muted-foreground" />
+                  )}
                 </div>
-                <Label htmlFor='pet-avatar' className='cursor-pointer text-sm text-primary underline'>Adicionar Foto</Label>
+                <Input
+                  type="file"
+                  className="hidden"
+                  id="pet-avatar"
+                  ref={fileInputRef}
+                  onChange={handleAvatarChange}
+                  accept="image/png, image/jpeg, image/gif"
+                />
+                <Button type="button" variant="link" className="text-primary" onClick={triggerFileInput}>
+                  Adicionar Foto
+                </Button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
