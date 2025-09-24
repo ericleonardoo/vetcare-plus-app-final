@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ClipboardUser, Loader2, PlusCircle, Trash2, X } from 'lucide-react';
+import { ClipboardList, Loader2, PlusCircle, Trash2, X } from 'lucide-react';
 import { useStaff, StaffMember, DayAvailability } from '@/context/StaffContext';
 import { useState, useTransition } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -175,7 +175,7 @@ export default function StaffPage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-headline flex items-center gap-3">
-            <ClipboardUser className="w-8 h-8" />
+            <ClipboardList className="w-8 h-8" />
             Gestão de Equipe
           </h1>
           <p className="text-muted-foreground">
@@ -232,7 +232,7 @@ export default function StaffPage() {
             </Table>
           ) : (
             <div className="text-center py-16 px-6 border-2 border-dashed rounded-lg">
-                <ClipboardUser className="mx-auto h-12 w-12 text-muted-foreground" />
+                <ClipboardList className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-semibold">Nenhum membro na equipe</h3>
                 <p className="mt-2 text-sm text-muted-foreground">Comece adicionando os profissionais da sua clínica para gerenciar os horários.</p>
                 <Button className="mt-6" onClick={() => handleOpenModal()}>

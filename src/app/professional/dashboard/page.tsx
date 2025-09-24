@@ -23,7 +23,7 @@ import { usePets } from "@/context/PetsContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Clock, PawPrint, PhoneForwarded, Loader2, Users, DollarSign, FileWarning, Package, AlertCircle, MessageSquareCheck } from "lucide-react";
+import { ArrowUpRight, Clock, PawPrint, PhoneForwarded, Loader2, Users, DollarSign, FileWarning, Package, AlertCircle, MessageSquarePlus } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/context/NotificationsContext";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
@@ -367,7 +367,7 @@ export default function ProfessionalDashboard() {
                     </ul>
                 ) : (
                     <div className="text-center text-muted-foreground p-8">
-                        <MessageSquareCheck className="mx-auto h-12 w-12" />
+                        <MessageSquarePlus className="mx-auto h-12 w-12" />
                         <h3 className="mt-4 text-lg font-semibold">Tudo resolvido!</h3>
                         <p className="mt-1 text-sm">Sua caixa de entrada de atendimentos está limpa.</p>
                     </div>
