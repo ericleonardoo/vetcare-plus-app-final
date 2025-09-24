@@ -2,7 +2,6 @@
 'use server';
 
 import { suggestAppointmentTimes as suggestAppointmentTimesFlow } from "@/ai/flows/suggest-appointment-times";
-import { chat as chatFlow } from "@/ai/flows/chat";
 import type { ChatInput, ChatOutput } from "@/ai/flows/chat";
 import { generateCarePlan as generateCarePlanFlow } from "@/ai/flows/generate-care-plan";
 import type { GenerateCarePlanInput, GenerateCarePlanOutput } from "@/ai/flows/generate-care-plan";
@@ -95,11 +94,6 @@ export async function getSuggestedTimesForPortal(data: PortalAppointmentFormInpu
         return { success: false, error: "Falha ao sugerir horários. Por favor, tente novamente mais tarde." };
     }
 }
-
-export async function chat(input: ChatInput): Promise<ChatOutput> {
-  return await chatFlow(input);
-}
-
 
 export async function generateCarePlan(data: GenerateCarePlanInput): Promise<{success: true, data: GenerateCarePlanOutput} | {success: false, error: string}> {
     try {
