@@ -84,7 +84,7 @@ export default function CompleteProfilePage() {
                  toast({
                     variant: 'destructive',
                     title: "Erro ao atualizar",
-                    description: result.error,
+                    description: result.error || "Ocorreu um erro desconhecido.",
                 });
             }
         });

@@ -150,26 +150,34 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 
 export async function updateUserProfile(userId: string, data: ProfileFormValues) {
+    console.log(`[ACTION] Iniciando a atualização do perfil para o usuário: ${userId}`);
+    console.log("[ACTION] Dados recebidos:", data);
+
     if (!userId) {
-        return { success: false, error: "Usuário não autenticado." };
+        console.error("[ACTION] ERRO: ID do usuário não fornecido.");
+        return { success: false, error: "Usuário não autenticado. ID ausente." };
     }
 
     const validatedData = profileFormSchema.safeParse(data);
     if (!validatedData.success) {
-        return { success: false, error: "Dados inválidos fornecidos." };
+        console.error("[ACTION] ERRO: Dados de perfil inválidos.", validatedData.error);
+        return { success: false, error: "Os dados fornecidos são inválidos." };
     }
     
     try {
         const tutorRef = doc(db, 'tutors', userId);
+        console.log("[ACTION] Tentando atualizar o documento em:", tutorRef.path);
+
         await setDoc(tutorRef, validatedData.data, { merge: true });
         
+        console.log("[ACTION] Perfil atualizado com SUCESSO!");
         revalidatePath('/portal/perfil');
         revalidatePath('/portal/dashboard');
 
         return { success: true, message: "Perfil atualizado com sucesso!" };
 
     } catch (error) {
-        console.error("Erro ao atualizar perfil no Firestore:", error);
-        return { success: false, error: "Ocorreu um erro ao salvar suas informações." };
+        console.error("!!!!!!!!!! [ACTION] ERRO CRÍTICO AO ATUALIZAR O PERFIL !!!!!!!!!!", error);
+        return { success: false, error: (error as Error).message };
     }
 }
