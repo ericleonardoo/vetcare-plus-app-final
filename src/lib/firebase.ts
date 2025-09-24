@@ -22,15 +22,16 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-
-// O GUARDIÃO: Uma promessa que representa a conclusão da configuração de persistência.
-export const persistencePromise = setPersistence(auth, browserSessionPersistence)
-  .then(() => {
-    console.log("[AUTH PERSISTENCE] Persistência da sessão configurada com sucesso.");
-  })
-  .catch((error) => {
-    console.error("[AUTH PERSISTENCE] Erro ao configurar a persistência:", error);
-  });
+// A verificação ambiental: Garante que o código de persistência só rode no navegador.
+if (typeof window !== 'undefined') {
+  setPersistence(auth, browserSessionPersistence)
+    .then(() => {
+      console.log("[AUTH PERSISTENCE] Persistência da sessão configurada com sucesso no navegador.");
+    })
+    .catch((error) => {
+      console.error("[AUTH PERSISTENCE] Erro ao configurar a persistência:", error);
+    });
+}
 
 
 export { app, auth, db, storage };

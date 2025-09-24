@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
-import { auth, db, persistencePromise } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -29,67 +29,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { toast } = useToast();
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      let unsubscribe = () => {};
-      try {
-        console.log("[AUTH CONTEXT] Aguardando a promessa de persistência...");
-        await persistencePromise;
-        console.log("[AUTH CONTEXT] Promessa de persistência resolvida. Iniciando verificação de auth.");
-  
-        const result = await getRedirectResult(auth);
-        if (result) {
-          console.log("[REDIRECT] Resultado obtido com SUCESSO! Usuário:", result.user.uid);
-          // O onAuthStateChanged tratará do resto, incluindo a criação de documentos.
-        } else {
-          console.log("[REDIRECT] Nenhum resultado de redirecionamento novo encontrado.");
+    const checkAuth = async () => {
+        try {
+            console.log("[REDIRECT] Verificando resultado do redirecionamento...");
+            const result = await getRedirectResult(auth);
+            if (result) {
+                console.log("[REDIRECT] Resultado obtido com SUCESSO!", result.user.uid);
+                const userDocRef = doc(db, 'tutors', result.user.uid);
+                const userDoc = await getDoc(userDocRef);
+
+                if (!userDoc.exists()) {
+                    const role = sessionStorage.getItem('googleAuthRole') || 'customer';
+                    sessionStorage.removeItem('googleAuthRole');
+                    await setDoc(userDocRef, {
+                        name: result.user.displayName,
+                        email: result.user.email,
+                        phone: result.user.phoneNumber || '',
+                        role: role,
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("[REDIRECT] Erro ao processar redirect:", error);
         }
-      } catch (error) {
-        console.error("[AUTH CONTEXT] Erro durante a inicialização ou redirect:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro de Autenticação",
-            description: "Não foi possível completar o login via redirecionamento."
-        });
-      } finally {
-        unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-          console.log("[AUTH LISTENER] Listener disparado.");
+
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+           console.log("[AUTH LISTENER] Listener disparado.");
           if (currentUser) {
             console.log("[AUTH LISTENER] Usuário detectado:", currentUser.uid);
             setUser(currentUser);
             
-            // Lógica de criação de documento e redirecionamento movida para cá
             const userDocRef = doc(db, 'tutors', currentUser.uid);
             const userDoc = await getDoc(userDocRef);
             let userData;
             
-            if (!userDoc.exists()) {
-              console.log("[FIRESTORE] Documento não existe. Criando novo documento...");
-              const role = sessionStorage.getItem('googleAuthRole') || 'customer';
-              sessionStorage.removeItem('googleAuthRole');
-              
-              userData = {
-                name: currentUser.displayName,
-                email: currentUser.email,
-                phone: currentUser.phoneNumber || '',
-                role: role,
-              };
-              await setDoc(userDocRef, userData);
-              console.log("[FIRESTORE] Documento do usuário criado com sucesso.");
-            } else {
-              userData = userDoc.data();
-              console.log("[FIRESTORE] Documento do usuário já existe.");
+            if (userDoc.exists()) {
+                userData = userDoc.data();
+                console.log("[FIRESTORE] Documento do usuário já existe.");
+                 setIsProfessional(userData.role === 'professional');
+                const isProfileComplete = userData.phone && userData.phone.trim() !== '';
+                const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro') || pathname === '/test-login';
+                
+                if (!isProfileComplete && !pathname.endsWith('/completar-perfil')) {
+                  router.push('/cadastro/completar-perfil');
+                } else if (isProfileComplete && (isAuthPage || pathname === '/')) {
+                  router.push(userData.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard');
+                }
             }
-            
-            setIsProfessional(userData.role === 'professional');
-            const isProfileComplete = userData.phone && userData.phone.trim() !== '';
-            const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/cadastro') || pathname === '/test-login';
-            
-            if (!isProfileComplete && !pathname.endsWith('/completar-perfil')) {
-              router.push('/cadastro/completar-perfil');
-            } else if (isProfileComplete && (isAuthPage || pathname === '/')) {
-              router.push(userData.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard');
-            }
-
           } else {
             console.log("[AUTH LISTENER] Nenhum usuário detectado.");
             setUser(null);
@@ -97,15 +83,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
           setLoading(false);
         });
-      }
-      return () => {
-        console.log("[AUTH CONTEXT] Limpando listener.");
-        unsubscribe();
-      };
+
+        return () => {
+            console.log("[AUTH CONTEXT] Limpando listener.");
+            unsubscribe();
+        };
     };
 
-    initializeAuth();
-  }, []); // O array de dependência vazio está correto aqui
+    checkAuth();
+  }, [pathname, router]); 
 
 
   const signInWithGoogle = async (role: 'customer' | 'professional' = 'customer') => {
