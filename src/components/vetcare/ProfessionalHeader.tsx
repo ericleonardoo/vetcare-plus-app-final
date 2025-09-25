@@ -23,6 +23,14 @@ import {
   SheetContent,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Separator } from '../ui/separator';
 import { useAuth } from '@/context/AuthContext';
@@ -30,9 +38,11 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Input } from '../ui/input';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useState } from 'react';
 
 export default function ProfessionalHeader() {
-  const { logout } = useAuth();
+  const { logout, userProfile } = useAuth();
+  const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const vetImage = PlaceHolderImages.find((img) => img.id === 'vet-1');
 
@@ -47,15 +57,15 @@ export default function ProfessionalHeader() {
   ];
 
   return (
-    <header className="flex h-16 items-center justify-between gap-4 border-b bg-background px-4 md:hidden">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
       <Sheet>
         <SheetTrigger asChild>
-          <Button size="icon" variant="outline">
+          <Button size="icon" variant="outline" className="sm:hidden">
             <Menu className="h-5 w-5" />
             <span className="sr-only">Abrir menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="flex flex-col p-0">
+        <SheetContent side="left" className="flex flex-col p-0 sm:max-w-xs">
            <div className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
              <Link
                 href="/professional/dashboard"
@@ -86,39 +96,62 @@ export default function ProfessionalHeader() {
             })}
           </nav>
           <div className="mt-auto p-4">
-            <Separator className="mb-4" />
-             <Link
-                href="/professional/perfil"
-                className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-                    pathname.startsWith('/professional/perfil') && 'text-primary bg-muted'
-                )}
-                >
-                <Settings className="h-5 w-5" />
-                Meu Perfil
-            </Link>
-            <Button
-                variant="ghost"
-                onClick={logout}
-                className="flex w-full justify-start items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-                >
-                <LogOut className="h-5 w-5" />
-                Sair
-            </Button>
+            <Separator className="my-4" />
+             <DropdownMenu onOpenChange={setOpen}>
+                <DropdownMenuTrigger asChild>
+                     <Button variant="ghost" className="flex items-center gap-2 w-full justify-start">
+                        <Avatar className="h-9 w-9">
+                            {vetImage && <AvatarImage src={vetImage.imageUrl} />}
+                            <AvatarFallback>{userProfile?.name?.charAt(0) ?? 'V'}</AvatarFallback>
+                        </Avatar>
+                        <div className="text-left">
+                            <p className="text-sm font-medium">{userProfile?.name}</p>
+                            <p className="text-xs text-muted-foreground">{userProfile?.role === 'professional' ? 'Profissional' : ''}</p>
+                        </div>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild><Link href="/professional/perfil">Perfil</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="#">Suporte</Link></DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">Sair</DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </SheetContent>
       </Sheet>
-
-      <div className="flex items-center gap-2">
-         <Button variant="outline" size="icon" className="h-8 w-8">
-            <Bell className="h-4 w-4" />
-            <span className="sr-only">Notificações</span>
-        </Button>
-        <Avatar className="h-8 w-8">
-            {vetImage && <AvatarImage src={vetImage.imageUrl} />}
-            <AvatarFallback>EC</AvatarFallback>
-        </Avatar>
+      <div className="relative ml-auto flex-1 md:grow-0">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar..."
+              className="w-full rounded-lg bg-muted pl-8 md:w-[200px] lg:w-[336px]"
+            />
       </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="overflow-hidden rounded-full"
+          >
+            <Avatar className='h-8 w-8'>
+                {vetImage && <AvatarImage src={vetImage.imageUrl} />}
+                <AvatarFallback>{userProfile?.name?.charAt(0) ?? 'V'}</AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setOpen(true)} asChild><Link href="/professional/perfil">Perfil</Link></DropdownMenuItem>
+          <DropdownMenuItem>Suporte</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">Sair</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
   );
 }

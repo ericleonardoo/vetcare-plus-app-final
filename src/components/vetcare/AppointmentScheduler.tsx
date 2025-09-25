@@ -7,6 +7,7 @@ import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { useEffect, useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import InputMask from 'react-input-mask';
 
 import { getSuggestedTimes } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
@@ -47,10 +48,12 @@ const services = [
   'Atendimento de Emergência',
 ];
 
+const emailRegex = /\S+@\S+\.\S+/;
+
 const appointmentFormSchema = z.object({
   ownerName: z.string().min(2, { message: 'O nome deve ter pelo menos 2 caracteres.' }),
   petName: z.string().min(1, { message: "O nome do pet é obrigatório." }),
-  email: z.string().email({ message: 'Por favor, insira um endereço de e-mail válido.' }),
+  email: z.string().regex(emailRegex, { message: 'Por favor, insira um endereço de e-mail válido.' }),
   phone: z.string().min(10, { message: 'Por favor, insira um número de telefone válido.' }),
   serviceType: z.string({ required_error: 'Por favor, selecione um serviço.' }),
   timeZone: z.string(),
@@ -194,7 +197,9 @@ export default function AppointmentScheduler() {
                         <FormItem>
                           <FormLabel>Telefone</FormLabel>
                           <FormControl>
-                            <Input placeholder="(11) 98765-4321" {...field} />
+                            <InputMask mask="(99) 99999-9999" value={field.value} onChange={field.onChange} onBlur={field.onBlur}>
+                              {(inputProps: any) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" />}
+                            </InputMask>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

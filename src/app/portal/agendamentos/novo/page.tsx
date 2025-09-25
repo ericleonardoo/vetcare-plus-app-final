@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Loader2, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -43,6 +43,7 @@ import { Label } from '@/components/ui/label';
 import { usePets } from '@/context/PetsContext';
 import { useAppointments } from '@/context/AppointmentsContext';
 import { useRouter } from 'next/navigation';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const services = [
   'Check-up de Rotina',
@@ -69,7 +70,7 @@ export default function NewAppointmentPage() {
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const { toast } = useToast();
   const [timeZone, setTimeZone] = useState('');
-  const { pets } = usePets();
+  const { pets, loading: petsLoading } = usePets();
   const { addAppointment } = useAppointments();
   const router = useRouter();
 
@@ -193,10 +194,14 @@ export default function NewAppointmentPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Pet</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                        disabled={pets.length === 0 || petsLoading}
+                      >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione o pet" />
+                            <SelectValue placeholder={petsLoading ? "Carregando pets..." : "Selecione o pet"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -206,6 +211,17 @@ export default function NewAppointmentPage() {
                         </SelectContent>
                       </Select>
                       <FormMessage />
+                      {pets.length === 0 && !petsLoading && (
+                        <Alert variant="default" className="mt-2 text-sm">
+                          <AlertDescription>
+                            Você ainda não cadastrou nenhum pet. {' '}
+                            <Link href="/portal/pets/novo" className="font-semibold text-primary underline">
+                              Adicione um pet
+                            </Link>
+                            {' '} para continuar.
+                          </AlertDescription>
+                        </Alert>
+                      )}
                     </FormItem>
                   )}
                 />

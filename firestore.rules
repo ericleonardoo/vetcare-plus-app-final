@@ -1,80 +1,44 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // =================================
-    // Helper Functions
-    // =================================
-    
-    // Checks if the requesting user has the 'professional' role.
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
     function isProfessional() {
-      // Use exists() to prevent errors if the document doesn't exist yet.
       return exists(/databases/$(database)/documents/tutors/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.role == 'professional';
     }
 
-    // Checks if the user is the owner of the document they are trying to access.
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
-    }
-
-    // =================================
-    // Collection Rules
-    // =================================
-
-    // Rule for the 'tutors' collection (user profiles)
     match /tutors/{userId} {
-      // READ: A user can read their own profile. A professional can read any profile.
       allow read: if isOwner(userId) || isProfessional();
-      
-      // CREATE: A user can create their own profile document (e.g., on signup).
-      // This is crucial for the "completar-perfil" page.
-      allow create: if isOwner(userId);
-      
-      // UPDATE: A user can only update their own profile.
-      // We are more specific than a general 'write' rule.
+      allow create: if request.auth.uid == userId;
       allow update: if isOwner(userId);
-      
-      // DELETE: Generally, users should not be able to delete their own accounts directly.
-      allow delete: if false;
     }
 
-    // Rules for the 'pets' collection
     match /pets/{petId} {
-      // READ: The pet's owner can read it. Professionals can read any pet's data.
-      allow read: if isProfessional() || (get(/databases/$(database)/documents/pets/$(petId)).data.tutorId == request.auth.uid);
-      
-      // WRITE (Create, Update, Delete): Only the owner of the pet can write to it.
-      // On create, we check the incoming data. On update/delete, we check the existing data.
-      allow write: if request.auth.uid == request.resource.data.tutorId || 
-                     request.auth.uid == resource.data.tutorId;
+      allow read: if request.auth.uid == resource.data.tutorId || isProfessional();
+      allow create: if request.auth.uid == request.resource.data.tutorId;
+      allow update, delete: if request.auth.uid == resource.data.tutorId || isProfessional();
     }
     
-    // Rules for the 'appointments' collection
     match /appointments/{appointmentId} {
-       // READ/WRITE for professionals (full access).
-      allow read, write: if isProfessional();
-      
-      // READ/CREATE for the owner of the appointment.
-      allow read, create: if request.auth.uid == getAfter(/databases/$(database)/documents/appointments/$(appointmentId)).data.tutorId;
+       allow read, create: if request.auth.uid == request.resource.data.tutorId || isProfessional();
+       allow update, delete: if request.auth.uid == resource.data.tutorId || isProfessional();
+    }
+
+    match /invoices/{invoiceId} {
+        allow read: if request.auth.uid == resource.data.clientId || isProfessional();
+        allow create, update, delete: if isProfessional();
     }
     
-    // Rules for the 'invoices' collection
-    match /invoices/{invoiceId} {
-      // Full access for professionals.
-      allow read, write: if isProfessional();
-      // Read-only access for the client who owns the invoice.
-      allow read: if get(/databases/$(database)/documents/invoices/$(invoiceId)).data.clientId == request.auth.uid;
-    }
-
-    // Rules for 'inventory' and 'staff' (professionals only)
-    match /inventory/{itemId} {
-      allow read, write: if isProfessional();
-    }
-
     match /staff/{staffId} {
-      allow read, write: if isProfessional();
+        allow read, write: if isProfessional();
+    }
+    
+    match /inventory/{itemId} {
+        allow read, write: if isProfessional();
     }
   }
 }
