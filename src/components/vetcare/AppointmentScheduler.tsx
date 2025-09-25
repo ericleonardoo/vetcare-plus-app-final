@@ -38,6 +38,10 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+
 
 const services = [
   'Check-up de Rotina',
@@ -202,8 +206,8 @@ export default function AppointmentScheduler() {
                                     value={field.value}
                                     onChange={field.onChange}
                                 >
-                                    {/* @ts-ignore */}
-                                    {(inputProps) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" />}
+                                  {/* @ts-ignore */}
+                                  {(inputProps: any) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" />}
                                 </InputMask>
                             </FormControl>
                             <FormMessage />

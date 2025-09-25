@@ -200,7 +200,7 @@ export default function ProfessionalSignupPage() {
                             disabled={isLoading || isGoogleLoading}
                           >
                            {/* @ts-ignore */}
-                           {(inputProps) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" />}
+                           {(inputProps: any) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" />}
                          </InputMask>
                       </FormControl>
                       <FormMessage />
