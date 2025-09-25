@@ -201,9 +201,8 @@ export default function AppointmentScheduler() {
                               mask="(99) 99999-9999"
                               value={field.value}
                               onChange={field.onChange}
-                              onBlur={field.onBlur}
                             >
-                              <Input type="tel" placeholder="(11) 98765-4321" />
+                              {(inputProps: any) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" />}
                             </InputMask>
                           </FormControl>
                           <FormMessage />
