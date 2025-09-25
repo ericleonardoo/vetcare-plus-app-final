@@ -195,17 +195,18 @@ export default function AppointmentScheduler() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Telefone</FormLabel>
-                          <FormControl>
-                            <InputMask
-                              mask="(99) 99999-9999"
-                              value={field.value}
-                              onChange={field.onChange}
-                            >
-                              {(inputProps: any) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" />}
-                            </InputMask>
-                          </FormControl>
-                          <FormMessage />
+                            <FormLabel>Telefone</FormLabel>
+                            <FormControl>
+                                <InputMask
+                                    mask="(99) 99999-9999"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                >
+                                    {/* @ts-ignore */}
+                                    {(inputProps) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" />}
+                                </InputMask>
+                            </FormControl>
+                            <FormMessage />
                         </FormItem>
                       )}
                     />

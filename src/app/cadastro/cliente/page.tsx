@@ -105,6 +105,7 @@ export default function CustomerSignupPage() {
         email: data.email,
         phone: data.phone,
         role: 'customer',
+        profileCompleted: true,
       });
 
       toast({
@@ -189,13 +190,19 @@ export default function CustomerSignupPage() {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Telefone</FormLabel>
-                      <FormControl>
-                         <InputMask mask="(99) 99999-9999" value={field.value} onChange={field.onChange} onBlur={field.onBlur}>
-                          {(inputProps: any) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" disabled={isLoading || isGoogleLoading}/>}
-                        </InputMask>
-                      </FormControl>
-                      <FormMessage />
+                        <FormLabel>Telefone</FormLabel>
+                        <FormControl>
+                            <InputMask
+                                mask="(99) 99999-9999"
+                                value={field.value}
+                                onChange={field.onChange}
+                                disabled={isLoading || isGoogleLoading}
+                            >
+                                {/* @ts-ignore */}
+                                {(inputProps) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" />}
+                            </InputMask>
+                        </FormControl>
+                        <FormMessage />
                     </FormItem>
                   )}
                 />

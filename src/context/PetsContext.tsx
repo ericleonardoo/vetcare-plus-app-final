@@ -164,7 +164,7 @@ export const PetsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...restOfPetData,
       avatarUrl,
       avatarHint: `${petData.species} ${petData.breed}`,
-      tutorId: user.uid,
+      tutorId: user.uid, // This was the missing field
       healthHistory: notes ? [{
         date: new Date().toISOString().split('T')[0],
         type: 'Consulta' as const,

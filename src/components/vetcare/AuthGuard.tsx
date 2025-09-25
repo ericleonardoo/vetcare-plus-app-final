@@ -17,7 +17,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if (loading) return; // Não faça nada enquanto o estado de auth está carregando
 
     const isAuthRoute = authRoutes.includes(pathname);
-    const isPublicRoute = publicRoutes.includes(pathname);
+    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route) && (pathname.length === route.length || pathname[route.length] === '/'));
+
 
     // Se tem um usuário logado
     if (user) {

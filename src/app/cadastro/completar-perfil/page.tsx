@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useTransition } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
@@ -132,8 +132,10 @@ export default function CompletarPerfilPage() {
                 mask="(99) 99999-9999"
                 defaultValue={user.phoneNumber || ''}
                 name="phone"
+                disabled={isPending}
               >
-                {(inputProps: any) => <Input {...inputProps} type="tel" placeholder="(XX) XXXXX-XXXX" required autoFocus />}
+                {/* @ts-ignore */}
+                {(inputProps) => <Input {...inputProps} type="tel" placeholder="(XX) XXXXX-XXXX" required autoFocus />}
               </InputMask>
             </div>
             <Button type="submit" className="w-full mt-4" disabled={isPending}>

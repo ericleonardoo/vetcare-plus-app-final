@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, AuthCredential } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +26,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => Promise<void>;
   signInWithGoogle: (role?: 'customer' | 'professional') => Promise<void>;
+  signInWithEmail: (email: string, pass: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,6 +63,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     return () => unsubscribe();
   }, []);
+
+  const signInWithEmail = async (email: string, pass: string) => {
+    setLoading(true);
+    try {
+        await firebaseSignInWithEmailAndPassword(auth, email, pass);
+        // O onAuthStateChanged vai cuidar de atualizar o estado do user e userProfile
+        toast({ title: "Login realizado com sucesso!" });
+    } catch (error) {
+        console.error("Erro no login com Email:", error);
+        throw error; // Re-lança o erro para a página de login tratar a UI
+    } finally {
+        setLoading(false);
+    }
+  };
+
 
   const signInWithGoogle = async (role: 'customer' | 'professional' = 'customer') => {
     const provider = new GoogleAuthProvider();
@@ -111,7 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, isProfessional, loading, logout, signInWithGoogle }}>
+    <AuthContext.Provider value={{ user, userProfile, isProfessional, loading, logout, signInWithGoogle, signInWithEmail }}>
       {children}
     </AuthContext.Provider>
   );

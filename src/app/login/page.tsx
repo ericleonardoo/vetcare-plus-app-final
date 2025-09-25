@@ -19,8 +19,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/AuthContext';
@@ -44,7 +42,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, signInWithEmail } = useAuth();
   const router = useRouter();
 
 
@@ -81,11 +79,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      toast({
-        title: "Login bem-sucedido!",
-        description: "Redirecionando para o seu portal...",
-      });
+      await signInWithEmail(data.email, data.password);
       // A lógica de redirecionamento é tratada pelo onAuthStateChanged e pelo AuthGuard
     } catch (error: any) {
       console.error("Erro no login:", error);
