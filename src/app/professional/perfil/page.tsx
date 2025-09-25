@@ -133,7 +133,7 @@ export default function ProfessionalProfilePage() {
                         <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                            <Input type="email" {...field} disabled={isPending || !!user?.email} />
+                            <Input type="email" {...field} disabled={true} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>

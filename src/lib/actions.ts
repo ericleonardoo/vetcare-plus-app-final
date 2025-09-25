@@ -1,3 +1,4 @@
+
 'use server';
 
 import { suggestAppointmentTimes as suggestAppointmentTimesFlow } from "@/ai/flows/suggest-appointment-times";
@@ -6,22 +7,9 @@ import { generateCarePlan as generateCarePlanFlow } from "@/ai/flows/generate-ca
 import type { GenerateCarePlanInput, GenerateCarePlanOutput } from "@/ai/flows/generate-care-plan";
 import { scheduleHumanFollowUpFlow, getNotifications as getNotificationsTool, clearAllNotifications as clearNotificationsTool } from '@/ai/tools/clinic-tools';
 import { z } from "zod";
-import { addDays } from "date-fns";
-import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { revalidatePath } from "next/cache";
-
-const appointmentFormSchema = z.object({
-  ownerName: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
-  petName: z.string().min(1, "O nome do pet é obrigatório."),
-  email: z.string().email("Por favor, insira um endereço de e-mail válido."),
-  phone: z.string().min(10, "Por favor, insira um número de telefone válido."),
-  serviceType: z.string({ required_error: 'Por favor, selecione um serviço.' }),
-  timeZone: z.string(),
-});
-
-type AppointmentFormInput = z.infer<typeof appointmentFormSchema>;
-
 
 const serviceDurations: Record<string, number> = {
     'Check-up de Rotina': 30,
@@ -39,31 +27,6 @@ const portalAppointmentFormSchema = z.object({
 });
 type PortalAppointmentFormInput = z.infer<typeof portalAppointmentFormSchema>;
 
-
-export async function getSuggestedTimes(data: AppointmentFormInput) {
-    const validatedData = appointmentFormSchema.safeParse(data);
-
-    if (!validatedData.success) {
-        return { success: false, error: "Dados inválidos fornecidos." };
-    }
-    
-    const { serviceType, timeZone } = validatedData.data;
-    const durationMinutes = serviceDurations[serviceType] || 30;
-
-    try {
-        const result = await suggestAppointmentTimesFlow({
-            serviceType,
-            timeZone,
-            durationMinutes,
-            numberOfSuggestions: 5,
-            date: new Date().toISOString(), // Passa a data atual como padrão
-        });
-        return { success: true, data: result.suggestedAppointmentTimes };
-    } catch (error) {
-        console.error("Erro no fluxo de IA:", error);
-        return { success: false, error: "Falha ao sugerir horários. Por favor, tente novamente mais tarde." };
-    }
-}
 
 export async function getSuggestedTimesForPortal(data: PortalAppointmentFormInput) {
     const validatedData = portalAppointmentFormSchema.safeParse(data);
@@ -135,4 +98,35 @@ export async function getNotifications() {
 export async function clearAllNotifications() {
     await clearNotificationsTool();
     return { success: true };
+}
+
+const profileUpdateSchema = z.object({
+    name: z.string().min(2),
+    phone: z.string().min(10),
+});
+
+export async function updateUserProfile(userId: string, data: { name: string, phone: string }) {
+    const validatedData = profileUpdateSchema.safeParse(data);
+    if (!validatedData.success) {
+        return { success: false, error: "Dados inválidos." };
+    }
+
+    if (!userId) {
+        return { success: false, error: "ID do usuário não fornecido."}
+    }
+
+    try {
+        const userDocRef = doc(db, 'tutors', userId);
+        await setDoc(userDocRef, {
+            name: validatedData.data.name,
+            phone: validatedData.data.phone
+        }, { merge: true });
+
+        revalidatePath('/professional/perfil');
+        return { success: true, message: "Perfil atualizado com sucesso!" };
+
+    } catch (error) {
+        console.error("Erro ao atualizar perfil:", error);
+        return { success: false, error: "Não foi possível salvar as informações." };
+    }
 }
