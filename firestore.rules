@@ -1,44 +1,45 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-
-    function isProfessional() {
-      return exists(/databases/$(database)/documents/tutors/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.role == 'professional';
-    }
-
-    match /tutors/{userId} {
-      allow read: if isOwner(userId) || isProfessional();
-      allow create: if request.auth.uid == userId;
-      allow update: if isOwner(userId);
-    }
-
     match /pets/{petId} {
-      allow read: if request.auth.uid == resource.data.tutorId || isProfessional();
-      allow create: if request.auth.uid == request.resource.data.tutorId;
-      allow update, delete: if request.auth.uid == resource.data.tutorId || isProfessional();
-    }
-    
-    match /appointments/{appointmentId} {
-       allow read, create: if request.auth.uid == request.resource.data.tutorId || isProfessional();
-       allow update, delete: if request.auth.uid == resource.data.tutorId || isProfessional();
-    }
+      // PERMISSÃO DE LEITURA:
+      // Permite que o dono do pet leia os dados.
+      allow read: if request.auth.uid == resource.data.tutorId;
 
-    match /invoices/{invoiceId} {
-        allow read: if request.auth.uid == resource.data.clientId || isProfessional();
-        allow create, update, delete: if isProfessional();
+      // PERMISSÃO DE ESCRITA:
+      // Permite que um usuário crie um pet, DESDE QUE ele se declare
+      // como o dono (tutorId) no documento que está sendo criado.
+      allow create: if request.auth.uid == request.resource.data.tutorId;
+
+      // Permite que o dono do pet atualize ou delete os dados.
+      allow update, delete: if request.auth.uid == resource.data.tutorId;
     }
-    
-    match /staff/{staffId} {
-        allow read, write: if isProfessional();
+    match /appointments/{appointmentId} {
+      // O tutor do pet pode criar/ler/atualizar/deletar seus próprios agendamentos.
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/pets/$(request.resource.data.petId)).data.tutorId == request.auth.uid;
+      // Profissionais podem ler todos os agendamentos
+      allow list: if request.auth != null && get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.role == 'professional';
     }
-    
+    match /tutors/{tutorId} {
+        // Usuários podem ler e atualizar seu próprio perfil.
+        allow read, update: if request.auth != null && request.auth.uid == tutorId;
+        // Profissionais podem ler perfis de tutores
+        allow get: if request.auth != null && get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.role == 'professional';
+        // Permite a criação inicial (cadastro). A regra no 'write' abaixo protege contra sobrescritas.
+        allow create: if request.auth != null;
+    }
+     match /invoices/{invoiceId} {
+      allow read: if request.auth != null && (request.auth.uid == resource.data.clientId || get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.role == 'professional');
+      allow write: if request.auth != null && get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.role == 'professional';
+    }
     match /inventory/{itemId} {
-        allow read, write: if isProfessional();
+       allow read, write: if request.auth != null && get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.role == 'professional';
+    }
+     match /staff/{staffId} {
+       allow read, write: if request.auth != null && get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.role == 'professional';
     }
   }
 }

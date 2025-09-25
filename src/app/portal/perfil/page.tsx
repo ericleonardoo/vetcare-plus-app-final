@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -28,14 +27,9 @@ import { useToast } from '@/hooks/use-toast';
 import { updateUserProfileOnClient } from '@/lib/tutor';
 import { useTutor } from '@/context/TutorContext';
 import { useAuth } from '@/context/AuthContext';
+import { profileSchema } from '@/lib/validators';
 
-const profileFormSchema = z.object({
-    name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
-    email: z.string().email({ message: "Por favor, insira um endereço de e-mail válido." }),
-    phone: z.string().min(10, { message: "Por favor, insira um número de telefone válido." }),
-});
-
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
     const [isPending, startTransition] = useTransition();
@@ -44,7 +38,7 @@ export default function ProfilePage() {
     const { tutor, updateTutor, loading: isTutorLoading } = useTutor();
 
     const form = useForm<ProfileFormValues>({
-        resolver: zodResolver(profileFormSchema),
+        resolver: zodResolver(profileSchema),
         defaultValues: {
             name: '',
             email: '',

@@ -32,12 +32,10 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-const emailRegex = /\S+@\S+\.\S+/;
-
 const signupSchema = z.object({
   name: z.string().min(2, { message: "O nome é obrigatório." }),
-  email: z.string().regex(emailRegex, { message: "Por favor, insira um e-mail válido." }),
-  phone: z.string().min(10, { message: "O telefone é obrigatório." }),
+  email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
+  phone: z.string().min(10, { message: "O telefone é obrigatório." }).regex(/^\+?[\d\s-()]{10,15}$/, { message: 'Telefone inválido. Use o formato (XX) XXXXX-XXXX.' }),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
   confirmPassword: z.string(),
 }).refine(data => data.password === data.confirmPassword, {

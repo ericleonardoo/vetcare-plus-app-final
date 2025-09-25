@@ -7,7 +7,10 @@ import { useToast } from "@/hooks/use-toast";
 import Link from 'next/link';
 import { PawPrint, Loader2 } from 'lucide-react';
 import { updateUserProfileOnClient } from '@/lib/tutor';
-
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 // Componentes da sua UI
 import { Button } from "@/components/ui/button"
@@ -19,7 +22,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+
+const profileSchema = z.object({
+  name: z.string().min(2, { message: 'O nome deve ter pelo menos 2 caracteres.' }),
+  phone: z.string().min(10, { message: 'O telefone deve ter pelo menos 10 dígitos.' }).regex(/^\+?[\d\s-()]{10,15}$/, { message: 'Telefone inválido.' }),
+});
+type ProfileSchemaType = z.infer<typeof profileSchema>;
 
 export default function CompletarPerfilPage() {
   const { user, loading: authLoading } = useAuth();
@@ -27,23 +35,25 @@ export default function CompletarPerfilPage() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
-  // ESTE LOG É O MAIS IMPORTANTE DE TODOS.
-  // Ele vai nos dizer QUEM a página acha que está logado.
+  const form = useForm<ProfileSchemaType>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+        name: user?.displayName || '',
+        phone: user?.phoneNumber || '',
+    },
+  });
+
   useEffect(() => {
-    console.log("====== VERIFICAÇÃO DA PÁGINA 'COMPLETAR-PERFIL' ======");
-    if (authLoading) {
-      console.log("Auth Context ainda está carregando...");
-    } else {
-      console.log("Auth Context carregado. Usuário detectado NESTA PÁGINA:", user);
+    if (user) {
+        form.reset({
+            name: user.displayName || '',
+            phone: user.phoneNumber || '',
+        });
     }
-    console.log("======================================================");
-  }, [user, authLoading]);
+  }, [user, form]);
 
 
-  const handleProfileUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    
-    // Garantia MÁXIMA de que o usuário existe antes de continuar
+  const handleProfileUpdate = (data: ProfileSchemaType) => {
     if (!user) {
       console.error("Tentativa de salvar perfil sem um usuário válido no contexto!");
       toast({
@@ -54,28 +64,14 @@ export default function CompletarPerfilPage() {
       return;
     }
     
-    const formData = new FormData(event.currentTarget);
-    const phone = formData.get('phone') as string;
-    const name = formData.get('name') as string;
-    
-    // A única fonte da verdade para o ID do usuário
-    const userId = user.uid;
-
-    console.log(`[CLIENT] PREPARANDO PARA CHAMAR A ACTION. Fonte da Verdade (user.uid): ${userId}`);
     startTransition(async () => {
       try {
-        // CHAMA A NOVA FUNÇÃO DO LADO DO CLIENTE
-        await updateUserProfileOnClient(userId, { name, phone });
-
+        await updateUserProfileOnClient(user.uid, data);
         toast({
           title: "Sucesso!",
           description: "Seu perfil foi salvo. Redirecionando...",
         });
-
-        // A lógica de redirecionamento do AuthGuard vai te tirar daqui
-        // Mas podemos forçar para uma melhor UX
         router.push('/portal/dashboard');
-
       } catch (error) {
         console.error("Erro ao atualizar perfil no cliente:", error);
         toast({
@@ -96,7 +92,6 @@ export default function CompletarPerfilPage() {
     );
   }
   
-  // Se, após carregar, não tiver usuário, redireciona.
   if (!user) {
       router.push('/login');
       return null;
@@ -116,24 +111,44 @@ export default function CompletarPerfilPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleProfileUpdate} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Nome Completo</Label>
-              <Input id="name" name="name" type="text" defaultValue={user.displayName || ''} required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" defaultValue={user.email || ''} disabled />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Telefone / WhatsApp</Label>
-              <Input id="phone" name="phone" type="tel" defaultValue={user.phoneNumber || ''} placeholder="(XX) XXXXX-XXXX" required autoFocus disabled={isPending} />
-            </div>
-            <Button type="submit" className="w-full mt-4" disabled={isPending}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar e Continuar
-            </Button>
-          </form>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleProfileUpdate)} className="grid gap-4">
+              <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Nome Completo</FormLabel>
+                          <FormControl>
+                              <Input type="text" {...field} />
+                          </FormControl>
+                           <FormMessage />
+                      </FormItem>
+                  )}
+              />
+              <div className="grid gap-2">
+                  <FormLabel>Email</FormLabel>
+                  <Input type="email" value={user.email || ''} disabled />
+              </div>
+              <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Telefone / WhatsApp</FormLabel>
+                          <FormControl>
+                            <Input type="tel" placeholder="(XX) XXXXX-XXXX" {...field} autoFocus disabled={isPending} />
+                          </FormControl>
+                           <FormMessage />
+                      </FormItem>
+                  )}
+              />
+              <Button type="submit" className="w-full mt-4" disabled={isPending}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar e Continuar
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>

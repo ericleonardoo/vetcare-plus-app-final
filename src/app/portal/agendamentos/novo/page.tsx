@@ -43,7 +43,7 @@ import { Label } from '@/components/ui/label';
 import { usePets } from '@/context/PetsContext';
 import { useAppointments } from '@/context/AppointmentsContext';
 import { useRouter } from 'next/navigation';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const services = [
   'Check-up de Rotina',
@@ -167,6 +167,28 @@ export default function NewAppointmentPage() {
     });
   }
 
+  if (petsLoading) {
+    return (
+        <div className="flex justify-center items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+    )
+  }
+
+  if (!petsLoading && pets.length === 0) {
+    return (
+        <Alert>
+          <AlertTitle className="font-bold">Nenhum pet cadastrado!</AlertTitle>
+          <AlertDescription>
+            Você precisa adicionar um pet ao seu perfil antes de poder agendar uma consulta.
+            <Button asChild className="mt-4">
+                <Link href="/portal/pets/novo">Adicionar meu primeiro pet</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -197,7 +219,7 @@ export default function NewAppointmentPage() {
                       <Select 
                         onValueChange={field.onChange} 
                         defaultValue={field.value}
-                        disabled={pets.length === 0 || petsLoading}
+                        disabled={petsLoading}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -211,17 +233,6 @@ export default function NewAppointmentPage() {
                         </SelectContent>
                       </Select>
                       <FormMessage />
-                      {pets.length === 0 && !petsLoading && (
-                        <Alert variant="default" className="mt-2 text-sm">
-                          <AlertDescription>
-                            Você ainda não cadastrou nenhum pet. {' '}
-                            <Link href="/portal/pets/novo" className="font-semibold text-primary underline">
-                              Adicione um pet
-                            </Link>
-                            {' '} para continuar.
-                          </AlertDescription>
-                        </Alert>
-                      )}
                     </FormItem>
                   )}
                 />
