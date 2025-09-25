@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
-const publicRoutes = ['/', '/login', '/cadastro', '/cadastro/cliente', '/cadastro/profissional'];
+const publicRoutes = ['/', '/login', '/cadastro', '/cadastro/cliente', '/cadastro/profissional', '/test-login'];
 const authRoutes = ['/login', '/cadastro', '/cadastro/cliente', '/cadastro/profissional', '/cadastro/completar-perfil'];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -16,20 +16,32 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return; // Não faça nada enquanto o estado de auth está carregando
 
-    const isProfileComplete = userProfile?.profileCompleted || false;
+    const isAuthRoute = authRoutes.includes(pathname);
+    const isPublicRoute = publicRoutes.includes(pathname);
 
-    if (user && !isProfileComplete && pathname !== '/cadastro/completar-perfil') {
-      // Se está logado, mas perfil incompleto E não está na página de completar perfil, force-o para lá.
-      router.replace('/cadastro/completar-perfil');
+    // Se tem um usuário logado
+    if (user) {
+        const isProfileComplete = userProfile?.profileCompleted || false;
+        
+        // 1. Se o perfil não está completo, force o preenchimento
+        if (!isProfileComplete && pathname !== '/cadastro/completar-perfil') {
+            router.replace('/cadastro/completar-perfil');
+            return;
+        }
 
-    } else if (user && isProfileComplete && authRoutes.includes(pathname)) {
-      // Se está logado, perfil completo E está em uma página de auth, mande para o dashboard.
-      const dashboard = userProfile?.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard';
-      router.replace(dashboard);
-
-    } else if (!user && !publicRoutes.includes(pathname) && (pathname.startsWith('/professional') || pathname.startsWith('/portal'))) {
-        // Se não está logado e tenta acessar uma rota protegida
-        router.replace('/login');
+        // 2. Se o perfil está completo e ele está numa rota de autenticação, redirecione para o dashboard
+        if (isProfileComplete && isAuthRoute) {
+            const dashboard = userProfile?.role === 'professional' ? '/professional/dashboard' : '/portal/dashboard';
+            router.replace(dashboard);
+            return;
+        }
+    } else {
+        // Se não tem usuário logado
+        // 3. E ele tenta acessar uma rota protegida (que não é pública), mande para o login.
+        if (!isPublicRoute && (pathname.startsWith('/portal') || pathname.startsWith('/professional'))) {
+            router.replace('/login');
+            return;
+        }
     }
 
   }, [user, userProfile, loading, pathname, router]);

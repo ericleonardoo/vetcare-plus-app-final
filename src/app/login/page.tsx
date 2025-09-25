@@ -86,7 +86,7 @@ export default function LoginPage() {
         title: "Login bem-sucedido!",
         description: "Redirecionando para o seu portal...",
       });
-      // A lógica de redirecionamento agora é tratada pelo AuthContext
+      // A lógica de redirecionamento é tratada pelo onAuthStateChanged e pelo AuthGuard
     } catch (error: any) {
       console.error("Erro no login:", error);
       let errorMessage = "Ocorreu um erro ao fazer login. Tente novamente.";

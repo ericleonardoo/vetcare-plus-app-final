@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, AuthCredential } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,7 @@ export interface UserProfile {
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
+  isProfessional: boolean;
   loading: boolean;
   logout: () => Promise<void>;
   signInWithGoogle: (role?: 'customer' | 'professional') => Promise<void>;
@@ -32,6 +33,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isProfessional, setIsProfessional] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -43,18 +45,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const userDocRef = doc(db, 'tutors', currentUser.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
-          setUserProfile(userDoc.data() as UserProfile);
+          const profile = userDoc.data() as UserProfile;
+          setUserProfile(profile);
+          setIsProfessional(profile.role === 'professional');
         } else {
+          // Documento do usuário não existe, pode ser um novo cadastro
           setUserProfile(null);
+          setIsProfessional(false);
         }
       } else {
         setUserProfile(null);
+        setIsProfessional(false);
       }
       setLoading(false);
     });
-
-    // O useEffect agora tem um array de dependências VAZIO.
-    // Ele roda UMA VEZ e nunca mais, como deve ser.
+    
     return () => unsubscribe();
   }, []);
 
@@ -69,24 +74,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        const newUserProfile: UserProfile = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
+        const newUserProfileData = {
           name: firebaseUser.displayName,
-          phone: '', // Telefone começa vazio
+          email: firebaseUser.email,
+          phone: firebaseUser.phoneNumber || '',
           role: role,
-          profileCompleted: false,
+          profileCompleted: !!(firebaseUser.phoneNumber),
         };
-        await setDoc(userDocRef, newUserProfile);
+        await setDoc(userDocRef, newUserProfileData, { merge: true });
+        
+        setUserProfile({
+          uid: firebaseUser.uid,
+          ...newUserProfileData
+        });
+        setIsProfessional(role === 'professional');
+
+      } else {
+        // Se o usuário já existe, apenas carregue os dados
+         const profile = userDoc.data() as UserProfile;
+         setUserProfile(profile);
+         setIsProfessional(profile.role === 'professional');
       }
+      
       toast({ title: "Login realizado com sucesso!" });
       // A lógica de redirecionamento será tratada pelo AuthGuard
     } catch (error) {
       console.error("Erro no login com Google:", error);
       toast({ variant: "destructive", title: "Erro ao fazer login." });
-    } finally {
       setLoading(false);
-    }
+    } 
   };
 
   const logout = async () => {
@@ -95,7 +111,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, logout, signInWithGoogle }}>
+    <AuthContext.Provider value={{ user, userProfile, isProfessional, loading, logout, signInWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );
