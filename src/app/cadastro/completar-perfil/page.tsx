@@ -134,7 +134,6 @@ export default function CompletarPerfilPage() {
                 name="phone"
                 disabled={isPending}
               >
-                {/* @ts-ignore */}
                 {(inputProps: any) => <Input {...inputProps} type="tel" placeholder="(XX) XXXXX-XXXX" required autoFocus />}
               </InputMask>
             </div>

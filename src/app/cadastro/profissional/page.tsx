@@ -199,8 +199,7 @@ export default function ProfessionalSignupPage() {
                             onChange={field.onChange}
                             disabled={isLoading || isGoogleLoading}
                           >
-                           {/* @ts-ignore */}
-                           {(inputProps: any) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" />}
+                           {(inputProps: any) => <Input {...inputProps} {...field} type="tel" placeholder="(11) 98765-4321" />}
                          </InputMask>
                       </FormControl>
                       <FormMessage />

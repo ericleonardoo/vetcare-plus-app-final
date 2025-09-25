@@ -192,15 +192,14 @@ export default function CustomerSignupPage() {
                     <FormItem>
                         <FormLabel>Telefone</FormLabel>
                         <FormControl>
-                            <InputMask
-                                mask="(99) 99999-9999"
-                                value={field.value}
-                                onChange={field.onChange}
-                                disabled={isLoading || isGoogleLoading}
-                            >
-                                {/* @ts-ignore */}
-                                {(inputProps: any) => <Input {...inputProps} type="tel" placeholder="(11) 98765-4321" />}
-                            </InputMask>
+                          <InputMask
+                            mask="(99) 99999-9999"
+                            value={field.value}
+                            onChange={field.onChange}
+                            disabled={isLoading || isGoogleLoading}
+                          >
+                            {(inputProps: any) => <Input {...inputProps} {...field} type="tel" placeholder="(11) 98765-4321" />}
+                          </InputMask>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
