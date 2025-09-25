@@ -117,8 +117,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       console.error("Erro no login com Google:", error);
       toast({ variant: "destructive", title: "Erro ao fazer login." });
-      setLoading(false);
-    } 
+    } finally {
+        setLoading(false);
+    }
   };
 
   const logout = async () => {
