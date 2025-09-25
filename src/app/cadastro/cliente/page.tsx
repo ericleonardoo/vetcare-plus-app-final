@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
-import InputMask from 'react-input-mask';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -192,14 +191,7 @@ export default function CustomerSignupPage() {
                     <FormItem>
                         <FormLabel>Telefone</FormLabel>
                         <FormControl>
-                          <InputMask
-                            mask="(99) 99999-9999"
-                            value={field.value}
-                            onChange={field.onChange}
-                            disabled={isLoading || isGoogleLoading}
-                          >
-                            {(inputProps: any) => <Input {...inputProps} {...field} type="tel" placeholder="(11) 98765-4321" />}
-                          </InputMask>
+                          <Input type="tel" placeholder="(11) 98765-4321" {...field} disabled={isLoading || isGoogleLoading} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>

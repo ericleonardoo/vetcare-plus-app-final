@@ -7,7 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import Link from 'next/link';
 import { PawPrint, Loader2 } from 'lucide-react';
 import { updateUserProfileOnClient } from '@/lib/tutor';
-import InputMask from 'react-input-mask';
 
 
 // Componentes da sua UI
@@ -128,14 +127,7 @@ export default function CompletarPerfilPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="phone">Telefone / WhatsApp</Label>
-              <InputMask
-                mask="(99) 99999-9999"
-                defaultValue={user.phoneNumber || ''}
-                name="phone"
-                disabled={isPending}
-              >
-                {(inputProps: any) => <Input {...inputProps} type="tel" placeholder="(XX) XXXXX-XXXX" required autoFocus />}
-              </InputMask>
+              <Input id="phone" name="phone" type="tel" defaultValue={user.phoneNumber || ''} placeholder="(XX) XXXXX-XXXX" required autoFocus disabled={isPending} />
             </div>
             <Button type="submit" className="w-full mt-4" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
