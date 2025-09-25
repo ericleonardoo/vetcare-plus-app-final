@@ -6,6 +6,7 @@ import Chatbot from '@/components/vetcare/Chatbot';
 import { AuthProvider } from '@/context/AuthContext';
 import { TutorProvider } from '@/context/TutorContext';
 import AuthGuard from '@/components/vetcare/AuthGuard';
+import BetaBanner from '@/components/vetcare/BetaBanner';
 
 export const metadata: Metadata = {
   title: 'VetCare+',
@@ -34,6 +35,7 @@ export default function RootLayout({
               {children}
             </AuthGuard>
             <Chatbot />
+            <BetaBanner />
             <Toaster />
           </TutorProvider>
         </AuthProvider>
